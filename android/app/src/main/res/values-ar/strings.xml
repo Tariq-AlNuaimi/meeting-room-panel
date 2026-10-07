@@ -1,0 +1,37 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="app_name">لوحة القاعة</string>
+    <string name="demo_room_name">قاعة الاجتماعات</string>
+
+    <string name="status_free">متاحة</string>
+    <string name="status_starting_soon">تبدأ قريبًا</string>
+    <string name="status_busy">مشغولة</string>
+
+    <string name="free_rest_of_day">متاحة لبقية اليوم</string>
+    <string name="next_in_minutes">الاجتماع التالي بعد %d دقيقة</string>
+    <string name="minutes_left">متبقٍ %d دقيقة</string>
+    <string name="minutes_short">%d دقيقة</string>
+    <plurals name="attendee_count">
+        <item quantity="zero">لا يوجد حضور</item>
+        <item quantity="one">حاضر واحد</item>
+        <item quantity="two">حاضران</item>
+        <item quantity="few">%d حضور</item>
+        <item quantity="many">%d حاضرًا</item>
+        <item quantity="other">%d حاضر</item>
+    </plurals>
+
+    <string name="today">اليوم</string>
+    <string name="no_more_meetings">لا توجد اجتماعات أخرى اليوم</string>
+    <string name="private_meeting">اجتماع خاص</string>
+    <string name="adhoc_meeting">حجز فوري</string>
+    <string name="untitled_meeting">اجتماع</string>
+
+    <string name="book_now">احجز الآن</string>
+    <string name="check_in">تسجيل الحضور</string>
+    <string name="extend_minutes">+%d دقيقة</string>
+    <string name="end_now">إنهاء الآن</string>
+    <string name="no_time_available">لا يوجد وقت متاح قبل الاجتماع التالي.</string>
+    <string name="cancel">إلغاء</string>
+    <string name="ok">حسنًا</string>
+    <string name="action_failed">تعذّر تنفيذ الإجراء</string>
+</resources>
