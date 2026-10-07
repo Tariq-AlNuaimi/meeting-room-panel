@@ -89,8 +89,8 @@ Stack:
 | #   | Phase                                     | Deliverable                                                                                                | Done when                                                                                      |
 | --- | ----------------------------------------- | ---------------------------------------------------------------------------------------------------------- | ---------------------------------------------------------------------------------------------- |
 | 0   | **M365 setup** (you, ~1 hr with an admin) | Room mailbox, calendar processing fix, room list + place metadata, Entra app, RBAC scope to room mailboxes | `Test-ServicePrincipalAuthorization` passes for the room and fails for a normal user's mailbox |
-| 1   | **Backend MVP**                           | Template fork, Graph provider, agenda + book/extend/end routes, pairing, admin page to pair/revoke, audit  | Book in Outlook → visible via `/api/device/agenda`; book via API → visible in Outlook          |
-| 2   | **Android MVP**                           | Status, Book now, Extend/End, attendees, pairing, offline cache, polling                                   | Running on the real tablet, round-trips with Outlook within 30 s                               |
+| 1   | **Backend MVP** ✅                           | Template fork, Graph provider, agenda + book/extend/end routes, pairing, admin page to pair/revoke, audit  | Book in Outlook → visible via `/api/device/agenda`; book via API → visible in Outlook          |
+| 2   | **Android MVP** ✅                           | Status, Book now, Extend/End, attendees, pairing, offline cache, polling                                   | Running on the real tablet, round-trips with Outlook within 30 s                               |
 | 3   | **Kiosk hardening** ✅ (self-update to do) | Device Owner + lock task, boot start, keep-on + dimming schedule, silent self-update from backend          | Tablet reboots straight into the app; staff cannot exit it                                     |
 | 4   | **Check-in & auto-release**               | Check-in window, no-show release (decline + organiser notified), configurable per room                     | A meeting with no check-in is released after N min and disappears in Outlook                   |
 | 5   | **Polish**                                | Arabic/RTL, privacy modes, Teams join QR, webhooks + delta (replace pure polling), LED adapter             | —                                                                                              |
@@ -113,6 +113,7 @@ Choose before Phase 3, because the LED adapter and Device Owner provisioning dep
 
 ## Next steps
 
-1. ~~Create the repo~~ — done. Android scaffold (Phase 2 shell with demo data) is in `android/`.
-2. Fork the template for the backend via `/new-project` (e.g. `meeting-room-backend`).
-3. Do Phase 0 yourself (you are the tenant admin): follow [m365-setup.md](m365-setup.md).
+1. ~~Create the repo~~, ~~backend~~ (`Tariq-AlNuaimi/meeting-room-backend`), ~~Android ↔ backend~~: done.
+2. Merge the backend PR so Vercel deploys it.
+3. Do Phase 0 yourself (you are the tenant admin): follow [m365-setup.md](m365-setup.md), then set the `MS_*` env vars on Vercel.
+4. Set up the tablet: follow [tablet-setup.md](tablet-setup.md).

@@ -1,6 +1,8 @@
 package com.rihal.roompanel.data
 
+import com.rihal.roompanel.domain.AttendeeDisplay
 import com.rihal.roompanel.domain.Meeting
+import com.rihal.roompanel.domain.PanelConfig
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
@@ -11,15 +13,22 @@ import java.time.Instant
 import java.time.temporal.ChronoUnit
 import java.util.UUID
 
-/** In-memory agenda for running the panel before the backend exists. Seeded relative to launch time. */
-class DemoAgendaRepository(private val clock: Clock = Clock.systemDefaultZone()) : AgendaRepository {
+/** In-memory agenda for demos and screenshots, no backend needed. Seeded relative to launch time. */
+class DemoAgendaRepository(
+    roomName: String,
+    private val clock: Clock = Clock.systemDefaultZone(),
+) : AgendaRepository {
 
-    private val state = MutableStateFlow(seed(clock.instant().truncatedTo(ChronoUnit.MINUTES)))
-    override val meetings: StateFlow<List<Meeting>> = state.asStateFlow()
+    private val config = PanelConfig(roomName = roomName, attendeeDisplay = AttendeeDisplay.NAMES)
+    private val meetingsFlow = MutableStateFlow(seed(clock.instant().truncatedTo(ChronoUnit.MINUTES)))
+    private val mutable = MutableStateFlow(AgendaState(config, meetingsFlow.value, clock.instant()))
+    override val state: StateFlow<AgendaState> = mutable.asStateFlow()
 
-    override suspend fun refresh(): Result<Unit> = Result.success(Unit)
+    override suspend fun refresh() {
+        mutable.value = AgendaState(config, meetingsFlow.value, clock.instant())
+    }
 
-    override suspend fun bookNow(minutes: Int): Result<Meeting> {
+    override suspend fun bookNow(minutes: Int): Result<Unit> {
         val now = clock.instant().truncatedTo(ChronoUnit.MINUTES)
         val meeting = Meeting(
             id = UUID.randomUUID().toString(),
@@ -30,8 +39,9 @@ class DemoAgendaRepository(private val clock: Clock = Clock.systemDefaultZone())
             checkedIn = true,
             bookedFromPanel = true,
         )
-        state.update { (it + meeting).sortedBy(Meeting::start) }
-        return Result.success(meeting)
+        meetingsFlow.update { (it + meeting).sortedBy(Meeting::start) }
+        refresh()
+        return Result.success(Unit)
     }
 
     override suspend fun extend(meetingId: String, minutes: Int): Result<Unit> = edit(meetingId) {
@@ -40,7 +50,7 @@ class DemoAgendaRepository(private val clock: Clock = Clock.systemDefaultZone())
 
     override suspend fun endEarly(meetingId: String): Result<Unit> {
         val now = clock.instant()
-        state.update { list ->
+        meetingsFlow.update { list ->
             list.mapNotNull { m ->
                 when {
                     m.id != meetingId -> m
@@ -49,13 +59,15 @@ class DemoAgendaRepository(private val clock: Clock = Clock.systemDefaultZone())
                 }
             }
         }
+        refresh()
         return Result.success(Unit)
     }
 
     override suspend fun checkIn(meetingId: String): Result<Unit> = edit(meetingId) { it.copy(checkedIn = true) }
 
     private fun edit(id: String, change: (Meeting) -> Meeting): Result<Unit> {
-        state.update { list -> list.map { if (it.id == id) change(it) else it } }
+        meetingsFlow.update { list -> list.map { if (it.id == id) change(it) else it } }
+        mutable.value = AgendaState(config, meetingsFlow.value, clock.instant())
         return Result.success(Unit)
     }
 

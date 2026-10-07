@@ -14,7 +14,10 @@ data class Meeting(
     val end: Instant,
     /** Private meetings never show subject, organiser or attendees on the door. */
     val isPrivate: Boolean = false,
+    /** Names, only when the room shows names (the server applies the room's privacy setting). */
     val attendees: List<String> = emptyList(),
+    /** How many attendees, when the room shows a count or names. */
+    val attendeeCount: Int = attendees.size,
     /** Teams join link, shown as a QR code when present. */
     val joinUrl: String? = null,
     val checkedIn: Boolean = false,
@@ -32,7 +35,7 @@ data class Meeting(
 
 enum class AttendeeDisplay { OFF, COUNT, NAMES }
 
-/** Per-room behaviour, served by the backend's /api/device/config. */
+/** Per-room behaviour, served with the agenda by the backend's `/api/device/agenda`. */
 data class PanelConfig(
     val roomName: String,
     val attendeeDisplay: AttendeeDisplay = AttendeeDisplay.COUNT,
@@ -42,6 +45,8 @@ data class PanelConfig(
     val maxAdHocMinutes: Int = 120,
     val extendStepMinutes: Int = 15,
     val workingHours: WorkingHours = WorkingHours(),
+    /** Minutes before a meeting starts that "Check in" appears. */
+    val checkInWindowMinutes: Int = 10,
 )
 
 /** When the office is open. Outside these hours the panel dims unless the room is in use. */

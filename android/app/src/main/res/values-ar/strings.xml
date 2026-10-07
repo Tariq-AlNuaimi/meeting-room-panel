@@ -34,4 +34,20 @@
     <string name="cancel">إلغاء</string>
     <string name="ok">حسنًا</string>
     <string name="action_failed">تعذّر تنفيذ الإجراء</string>
+
+    <string name="error_conflict">حجز شخص آخر القاعة لهذا الوقت للتو. اختر مدة أقصر.</string>
+    <string name="error_offline">اللوحة غير متصلة. حاول مرة أخرى بعد قليل.</string>
+    <string name="error_not_panel_booking">تم حجز هذا الاجتماع عبر Outlook أو Teams. عدّله هناك.</string>
+    <string name="error_meeting_gone">انتهى هذا الاجتماع أو أُلغي.</string>
+    <string name="error_generic">حدث خطأ ما. حاول مرة أخرى.</string>
+    <string name="stale_offline">غير متصل. يتم عرض آخر جدول معروف.</string>
+    <string name="stale_calendar">تعذّر الوصول إلى التقويم. يتم عرض آخر جدول معروف.</string>
+    <string name="stale_not_configured">لم يتم ربط التقويم بعد.</string>
+    <string name="loading">جارٍ تحميل جدول القاعة…</string>
+    <string name="pair_title">اقتران هذا الجهاز</string>
+    <string name="pair_instructions">في بوابة إدارة لوحة القاعات، افتح الأجهزة اللوحية ← اقتران جهاز، وأدخل هذا الرمز واختر القاعة.</string>
+    <string name="pair_expires">يتغير الرمز كل 10 دقائق.</string>
+    <string name="pair_connecting">جارٍ الاتصال…</string>
+    <string name="pair_error">تعذّر الوصول إلى الخادم. تحقق من شبكة Wi-Fi؛ جارٍ إعادة المحاولة…</string>
+    <string name="pair_server">الخادم: %1$s</string>
 </resources>

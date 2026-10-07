@@ -37,10 +37,11 @@ class PanelScreenScreenshotTest {
     private val review = Meeting(
         "review", "Product review", "Omar Al-Harthy", at(25), at(85),
         attendees = listOf("Omar Al-Harthy", "Tariq Al-Naaimi", "Layla Al-Rawahi", "Khalid Al-Lawati"),
+        attendeeCount = 4,
     )
     private val private = Meeting("private", null, null, at(120), at(150), isPrivate = true)
 
-    private fun render(meetings: List<Meeting>, name: String) {
+    private fun render(meetings: List<Meeting>, name: String, stale: Boolean = false) {
         val status = RoomStatusCalculator.compute(meetings, now, config.startingSoonWindow)
         val state = PanelUiState(
             config = config,
@@ -51,6 +52,8 @@ class PanelScreenScreenshotTest {
             canExtendCurrent = false,
             actionInFlight = false,
             lastError = null,
+            stale = stale,
+            problem = if (stale) com.rihal.roompanel.data.SyncProblem.OFFLINE else null,
         )
         compose.setContent {
             PanelTheme { PanelScreen(state, onBook = {}, onExtend = {}, onEnd = {}, onCheckIn = {}, onDismissError = {}) }
@@ -66,6 +69,17 @@ class PanelScreenScreenshotTest {
 
     @Test
     fun busy() = render(listOf(review.copy(start = at(-20), end = at(40)), private), "busy")
+
+    @Test
+    fun staleOffline() = render(listOf(review.copy(start = at(-20), end = at(40)), private), "stale_offline", stale = true)
+
+    @Test
+    fun pairing() {
+        compose.setContent {
+            PanelTheme { com.rihal.roompanel.ui.pairing.PairingScreen(com.rihal.roompanel.ui.pairing.PairingState.ShowingCode("K7QM-3XRP"), "meeting-room-backend-cyan.vercel.app") }
+        }
+        compose.onRoot().captureRoboImage("src/test/screenshots/pairing.png")
+    }
 
     @Test
     fun emptyDay() = render(emptyList(), "empty_day")

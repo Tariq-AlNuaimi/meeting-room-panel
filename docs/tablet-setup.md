@@ -44,6 +44,14 @@ Expected output: `Success: Device owner set to package ComponentInfo{com.rihal.r
 
 Open the app once (`adb shell monkey -p com.rihal.roompanel 1`, or tap the icon). It pins itself, becomes the home screen, and hides the status bar.
 
+**Pair it with its room:**
+
+1. The tablet shows **Pair this tablet** and an 8-character code.
+2. In the admin portal (`https://meeting-room-backend-cyan.vercel.app`), go to **Tablets → Pair a tablet**.
+3. Enter the code, choose the room, and name the tablet.
+4. Within a few seconds the tablet switches to the room's schedule.
+5. If you later revoke the tablet in the portal, it returns to the pairing screen by itself.
+
 **Check it:**
 - Press Home and swipe up: you should stay in the panel.
 - Reboot with `adb reboot`: the tablet should come straight back to the panel without a lock screen.

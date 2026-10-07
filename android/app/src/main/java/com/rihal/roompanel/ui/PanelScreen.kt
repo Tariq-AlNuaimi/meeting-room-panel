@@ -42,6 +42,7 @@ import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.rihal.roompanel.R
+import com.rihal.roompanel.data.SyncProblem
 import com.rihal.roompanel.domain.AttendeeDisplay
 import com.rihal.roompanel.domain.Meeting
 import com.rihal.roompanel.domain.PanelConfig
@@ -84,12 +85,24 @@ fun PanelScreen(
             onDismiss = { showBooking = false },
         )
     }
-    state.lastError?.let { message ->
+    state.lastError?.let { code ->
         AlertDialog(
             onDismissRequest = onDismissError,
             confirmButton = { TextButton(onClick = onDismissError) { Text(stringResource(R.string.ok)) } },
             title = { Text(stringResource(R.string.action_failed)) },
-            text = { Text(message) },
+            text = {
+                Text(
+                    stringResource(
+                        when (code) {
+                            "conflict" -> R.string.error_conflict
+                            "offline" -> R.string.error_offline
+                            "not_panel_booking" -> R.string.error_not_panel_booking
+                            "ended", "not_found" -> R.string.error_meeting_gone
+                            else -> R.string.error_generic
+                        },
+                    ),
+                )
+            },
         )
     }
 }
@@ -109,6 +122,7 @@ private fun StatusPane(
         verticalArrangement = Arrangement.SpaceBetween,
     ) {
         Column {
+            if (state.stale) StaleBanner(state.problem)
             Text(
                 state.config.roomName,
                 color = Color.White.copy(alpha = 0.85f),
@@ -142,21 +156,43 @@ private fun StatusPane(
             when (status) {
                 is RoomStatus.Busy -> {
                     val current = status.current
-                    if (!current.checkedIn) PanelButton(stringResource(R.string.check_in), enabled) { onCheckIn(current.id) }
+                    if (!current.checkedIn && !state.stale) PanelButton(stringResource(R.string.check_in), enabled) { onCheckIn(current.id) }
                     if (state.canExtendCurrent) {
                         PanelOutlinedButton(stringResource(R.string.extend_minutes, state.config.extendStepMinutes), enabled) { onExtend(current.id) }
                     }
-                    if (current.bookedFromPanel) PanelOutlinedButton(stringResource(R.string.end_now), enabled) { onEnd(current.id) }
+                    if (current.bookedFromPanel && !state.stale) PanelOutlinedButton(stringResource(R.string.end_now), enabled) { onEnd(current.id) }
                 }
                 is RoomStatus.StartingSoon -> {
                     val next = status.next
-                    if (!next.checkedIn) PanelButton(stringResource(R.string.check_in), enabled) { onCheckIn(next.id) }
+                    val windowOpen = !state.now.isBefore(next.start.minusSeconds(state.config.checkInWindowMinutes * 60L))
+                    if (!next.checkedIn && windowOpen && !state.stale) PanelButton(stringResource(R.string.check_in), enabled) { onCheckIn(next.id) }
                     if (state.bookOptions.isNotEmpty()) PanelOutlinedButton(stringResource(R.string.book_now), enabled, onBookClick)
                 }
                 is RoomStatus.Free -> if (state.bookOptions.isNotEmpty()) PanelButton(stringResource(R.string.book_now), enabled, onBookClick)
             }
         }
     }
+}
+
+/** The door may be wrong: say so plainly, and why, instead of showing old data as fact. */
+@Composable
+private fun StaleBanner(problem: SyncProblem?) {
+    Text(
+        stringResource(
+            when (problem) {
+                SyncProblem.CALENDAR_NOT_CONFIGURED -> R.string.stale_not_configured
+                SyncProblem.CALENDAR_UNAVAILABLE -> R.string.stale_calendar
+                else -> R.string.stale_offline
+            },
+        ),
+        color = Color.White,
+        fontSize = 20.sp,
+        modifier = Modifier
+            .padding(bottom = 16.dp)
+            .background(Color.Black.copy(alpha = 0.35f), RoundedCornerShape(12.dp))
+            .padding(horizontal = 16.dp, vertical = 10.dp)
+            .semantics { liveRegion = LiveRegionMode.Polite },
+    )
 }
 
 @Composable
@@ -185,11 +221,11 @@ private fun NextUp(meeting: Meeting, now: Instant, config: PanelConfig) {
 @OptIn(ExperimentalLayoutApi::class)
 @Composable
 private fun Attendees(meeting: Meeting, display: AttendeeDisplay) {
-    if (meeting.isPrivate || meeting.attendees.isEmpty()) return
+    if (meeting.isPrivate || meeting.attendeeCount == 0) return
     when (display) {
         AttendeeDisplay.OFF -> Unit
         AttendeeDisplay.COUNT -> WhiteText(
-            pluralStringResource(R.plurals.attendee_count, meeting.attendees.size, meeting.attendees.size),
+            pluralStringResource(R.plurals.attendee_count, meeting.attendeeCount, meeting.attendeeCount),
             22.sp,
         )
         AttendeeDisplay.NAMES -> FlowRow(

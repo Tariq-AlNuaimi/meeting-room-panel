@@ -1,6 +1,7 @@
 plugins {
     alias(libs.plugins.android.application)
     alias(libs.plugins.kotlin.compose)
+    alias(libs.plugins.kotlin.serialization)
     alias(libs.plugins.roborazzi)
 }
 
@@ -13,7 +14,10 @@ android {
         minSdk = 28 // Android 9: lock task features (setLockTaskFeatures)
         targetSdk = 37
         versionCode = 1
-        versionName = "0.1.0"
+        versionName = "0.2.0"
+        // Backend base URL. Override per build: ./gradlew assembleDebug -PbackendUrl=https://...
+        val backendUrl = (project.findProperty("backendUrl") as String?) ?: "https://meeting-room-backend-cyan.vercel.app"
+        buildConfigField("String", "BACKEND_URL", "\"$backendUrl\"")
     }
 
     buildTypes {
@@ -29,6 +33,7 @@ android {
     }
     buildFeatures {
         compose = true
+        buildConfig = true
     }
     testOptions {
         unitTests.isIncludeAndroidResources = true
@@ -45,6 +50,7 @@ dependencies {
     implementation(libs.androidx.compose.ui.tooling.preview)
     implementation(libs.androidx.compose.material3)
     implementation(libs.kotlinx.coroutines.android)
+    implementation(libs.kotlinx.serialization.json)
     debugImplementation(libs.androidx.compose.ui.tooling)
     debugImplementation(libs.androidx.compose.ui.test.manifest)
 

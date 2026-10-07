@@ -30,4 +30,20 @@
     <string name="cancel">Cancel</string>
     <string name="ok">OK</string>
     <string name="action_failed">That didn\'t work</string>
+
+    <string name="error_conflict">Someone just booked the room for that time. Pick a shorter booking.</string>
+    <string name="error_offline">The panel is offline. Try again in a moment.</string>
+    <string name="error_not_panel_booking">This meeting was booked in Outlook or Teams. Change it there.</string>
+    <string name="error_meeting_gone">That meeting has already ended or was cancelled.</string>
+    <string name="error_generic">Something went wrong. Try again.</string>
+    <string name="stale_offline">Offline. Showing the last known schedule.</string>
+    <string name="stale_calendar">Can\'t reach the calendar. Showing the last known schedule.</string>
+    <string name="stale_not_configured">Calendar not connected yet.</string>
+    <string name="loading">Loading the room\'s schedule…</string>
+    <string name="pair_title">Pair this tablet</string>
+    <string name="pair_instructions">In the Room Panel admin portal, open Tablets → Pair a tablet, enter this code and choose the room.</string>
+    <string name="pair_expires">The code changes every 10 minutes.</string>
+    <string name="pair_connecting">Connecting…</string>
+    <string name="pair_error">Can\'t reach the server. Check the Wi-Fi; retrying…</string>
+    <string name="pair_server">Server: %1$s</string>
 </resources>
