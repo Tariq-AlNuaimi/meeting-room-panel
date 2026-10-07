@@ -5,6 +5,7 @@ import android.view.WindowManager
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
 import androidx.activity.viewModels
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.core.view.WindowCompat
 import androidx.core.view.WindowInsetsCompat
@@ -15,11 +16,14 @@ import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.rihal.roompanel.data.DemoAgendaRepository
 import com.rihal.roompanel.domain.AttendeeDisplay
 import com.rihal.roompanel.domain.PanelConfig
+import com.rihal.roompanel.kiosk.KioskPolicy
 import com.rihal.roompanel.ui.PanelScreen
 import com.rihal.roompanel.ui.PanelTheme
 import com.rihal.roompanel.ui.PanelViewModel
 
 class MainActivity : ComponentActivity() {
+
+    private val kiosk by lazy { KioskPolicy(this) }
 
     // Phase 2 swaps DemoAgendaRepository for the backend client and loads PanelConfig from /api/device/config.
     private val viewModel: PanelViewModel by viewModels {
@@ -43,6 +47,9 @@ class MainActivity : ComponentActivity() {
         setContent {
             PanelTheme {
                 val state by viewModel.state.collectAsStateWithLifecycle()
+                LaunchedEffect(state.brightness) {
+                    window.attributes = window.attributes.apply { screenBrightness = state.brightness }
+                }
                 PanelScreen(
                     state = state,
                     onBook = viewModel::bookNow,
@@ -55,7 +62,12 @@ class MainActivity : ComponentActivity() {
         }
     }
 
-    /** Full-screen; real lock-down (Device Owner + lock task) arrives in Phase 3. */
+    override fun onResume() {
+        super.onResume()
+        kiosk.enter(this)
+    }
+
+    /** Full-screen even when not Device Owner; [KioskPolicy] adds the real lock-down when it is. */
     private fun hideSystemBars() {
         WindowCompat.setDecorFitsSystemWindows(window, false)
         WindowInsetsControllerCompat(window, window.decorView).apply {

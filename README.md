@@ -13,13 +13,16 @@ The room's calendar lives in **Microsoft 365** (an Exchange room mailbox), so bo
 
 ## Status
 
-**Phase 2 shell.** The panel UI runs on demo data (`DemoAgendaRepository`). The backend and the Microsoft 365 connection come next; see the plan's phases.
+The panel UI runs on demo data (`DemoAgendaRepository`). The backend and the Microsoft 365 connection come next; see the plan's phases.
 
 | Works now | Not yet |
 |---|---|
 | Free / starting-soon / busy states, day agenda, attendees, private-meeting masking | Backend client and device pairing |
-| Book now, extend, end early, check in (in memory) | Kiosk lock (Device Owner + lock task), boot start, dimming |
-| English + Arabic (RTL), keep-screen-on, full-screen | Auto-release of no-shows, Teams join QR, LED bar |
+| Book now, extend, end early, check in (in memory) | Auto-release of no-shows, Teams join QR, LED bar |
+| English + Arabic (RTL) | Remote unlock / config from the admin page |
+| Kiosk lock (Device Owner + lock task), home-screen boot start, dimming outside working hours | |
+
+**Setup guides:** [Microsoft 365 (admin)](docs/m365-setup.md) · [Tablet kiosk mode](docs/tablet-setup.md)
 
 ## Build
 
@@ -40,9 +43,11 @@ Install on a tablet with USB debugging on: `adb install -r app/build/outputs/apk
 
 ```
 android/app/src/main/java/com/rihal/roompanel/
-  domain/   Meeting, RoomStatus calculator, BookingRules   (pure Kotlin, unit-tested)
+  domain/   Meeting, RoomStatus calculator, BookingRules, BrightnessSchedule   (pure Kotlin, unit-tested)
   data/     AgendaRepository interface + DemoAgendaRepository
   ui/       PanelViewModel, PanelScreen (Compose), Theme
+  kiosk/    KioskPolicy (Device Owner lock-down), PanelDeviceAdminReceiver
+android/app/src/debug/   adb-only kiosk exit (not in release builds)
 docs/       plan and research
 ```
 

@@ -1,7 +1,9 @@
 package com.rihal.roompanel.domain
 
+import java.time.DayOfWeek
 import java.time.Duration
 import java.time.Instant
+import java.time.LocalTime
 
 /** One booking on the room's calendar, already normalised by the backend. */
 data class Meeting(
@@ -39,4 +41,19 @@ data class PanelConfig(
     val bookingOptionsMinutes: List<Int> = listOf(15, 30, 60),
     val maxAdHocMinutes: Int = 120,
     val extendStepMinutes: Int = 15,
+    val workingHours: WorkingHours = WorkingHours(),
 )
+
+/** When the office is open. Outside these hours the panel dims unless the room is in use. */
+data class WorkingHours(
+    /** Oman work week by default. */
+    val days: Set<DayOfWeek> = setOf(
+        DayOfWeek.SUNDAY, DayOfWeek.MONDAY, DayOfWeek.TUESDAY, DayOfWeek.WEDNESDAY, DayOfWeek.THURSDAY,
+    ),
+    val start: LocalTime = LocalTime.of(7, 0),
+    val end: LocalTime = LocalTime.of(18, 0),
+) {
+    init {
+        require(end.isAfter(start)) { "Working hours must end after they start" }
+    }
+}

@@ -4,6 +4,7 @@ import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.rihal.roompanel.data.AgendaRepository
 import com.rihal.roompanel.domain.BookingRules
+import com.rihal.roompanel.domain.BrightnessSchedule
 import com.rihal.roompanel.domain.Meeting
 import com.rihal.roompanel.domain.PanelConfig
 import com.rihal.roompanel.domain.RoomStatus
@@ -29,6 +30,8 @@ data class PanelUiState(
     val canExtendCurrent: Boolean,
     val actionInFlight: Boolean,
     val lastError: String?,
+    /** Window brightness, 0..1, from [BrightnessSchedule]. */
+    val brightness: Float = BrightnessSchedule.FULL,
 )
 
 class PanelViewModel(
@@ -59,6 +62,7 @@ class PanelViewModel(
                     BookingRules.canExtend(status.current, meetings, config.extendStepMinutes),
                 actionInFlight = busy,
                 lastError = error,
+                brightness = BrightnessSchedule.brightnessFor(now.atZone(clock.zone), status, config.workingHours),
             )
         }.stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), initialState())
 
