@@ -11,9 +11,9 @@ The room's calendar lives in **Microsoft 365** (an Exchange room mailbox), so bo
 |---|---|---|---|
 | ![](android/app/src/test/screenshots/free.png) | ![](android/app/src/test/screenshots/starting_soon.png) | ![](android/app/src/test/screenshots/busy.png) | ![](android/app/src/test/screenshots/busy_ar.png) |
 
-| Pairing | Offline |
-|---|---|
-| ![](android/app/src/test/screenshots/pairing.png) | ![](android/app/src/test/screenshots/stale_offline.png) |
+| Pairing | Offline | Teams QR + release countdown |
+|---|---|---|
+| ![](android/app/src/test/screenshots/pairing.png) | ![](android/app/src/test/screenshots/stale_offline.png) | ![](android/app/src/test/screenshots/busy_teams_release.png) |
 
 ## Status
 
@@ -22,8 +22,11 @@ The panel talks to its backend, [`meeting-room-backend`](https://github.com/Tari
 | Works now | Not yet |
 |---|---|
 | Pairing by code (admin approves in the portal); Keystore-encrypted device token; auto re-pair when revoked | Microsoft 365 connected for real (needs the [admin setup](docs/m365-setup.md)) |
-| Free / starting-soon / busy, day agenda, attendees per the room's privacy setting, private-meeting masking | Auto-release of no-shows, Teams join QR, LED bar |
-| Book now, extend, end early, check in, through the backend | Silent self-update; remote unlock |
+| Free / starting-soon / busy, day agenda, attendees per the room's privacy setting, private-meeting masking | LED status bar (needs panel hardware) |
+| Book now, extend, end early, check in, through the backend | Remote unlock from the portal |
+| No-show auto-release countdown (rule runs on the backend, per room, off by default) | |
+| Teams join QR code for meetings with a Teams link | |
+| Silent self-update for Device Owner tablets ([how to publish](docs/tablet-setup.md#updating-the-app-no-usb-after-the-first-install)) | |
 | "Offline / calendar unavailable" banner; actions disabled on stale data | |
 | English + Arabic (RTL); kiosk lock, boot start, dimming outside working hours | |
 

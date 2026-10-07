@@ -71,6 +71,19 @@ class PanelScreenScreenshotTest {
     fun busy() = render(listOf(review.copy(start = at(-20), end = at(40)), private), "busy")
 
     @Test
+    fun busyTeamsWithReleaseCountdown() = render(
+        listOf(
+            review.copy(
+                start = at(-5), end = at(55),
+                joinUrl = "https://teams.microsoft.com/l/meetup-join/19%3ameeting_demo%40thread.v2/0",
+                releaseAt = at(5),
+            ),
+            private,
+        ),
+        "busy_teams_release",
+    )
+
+    @Test
     fun staleOffline() = render(listOf(review.copy(start = at(-20), end = at(40)), private), "stale_offline", stale = true)
 
     @Test

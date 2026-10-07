@@ -62,6 +62,37 @@ Open the app once (`adb shell monkey -p com.rihal.roompanel 1`, or tap the icon)
 - Consumer tablet batteries kept at 100% for months can swell. Use the tablet's battery-protection option if it has one (often "Protect battery" or "Charge to 85%"). Otherwise put the charger on a smart plug that turns off overnight. The panel dims outside working hours anyway.
 - Run a short USB-C cable through the wall mount. Avoid a cable that can be yanked out from the door side.
 
+## Updating the app (no USB after the first install)
+
+Paired tablets check the backend about 2 minutes after start and then every 6 hours. If you have published a newer version, the tablet downloads it, verifies its SHA-256 and installs it silently, then restarts the panel. This only works when the tablet is Device Owner.
+
+**One-time: create the release signing key.** Keep it in your password manager and **never** commit it. Every APK the tablet ever installs must be signed with this key, so if you lose it, every tablet has to be factory-reset and set up again.
+
+```bash
+keytool -genkeypair -v -keystore ~/room-panel.jks -alias room-panel -keyalg RSA -keysize 3072 -validity 10000
+```
+
+Install the **first** APK on each tablet as a release build signed with this key, using the same `adb install` / `dpm` steps as above but with `app-release.apk`. A debug build can't be upgraded by a release build.
+
+**Each release:**
+
+1. Raise `versionCode` (and `versionName`) in `android/app/build.gradle.kts`.
+2. Build and sign the release APK:
+   ```bash
+   cd android
+   ./gradlew assembleRelease -PreleaseKeystore=$HOME/room-panel.jks -PreleaseKeyAlias=room-panel \
+     -PreleaseStorePassword=... -PreleaseKeyPassword=...
+   sha256sum app/build/outputs/apk/release/app-release.apk
+   ```
+3. Upload `app-release.apk` anywhere the tablets can download it over **https**. For example, attach it to a GitHub release of a **public** repo, or put it in any static file host.
+4. In Vercel → `meeting-room-backend` → Settings → Environment Variables, set:
+   - `APP_UPDATE_VERSION_CODE` to the new `versionCode`
+   - `APP_UPDATE_URL` to the https link
+   - `APP_UPDATE_SHA256` to the hash from step 2
+
+   Then redeploy.
+5. Tablets pick it up within 6 hours. To force it sooner, reboot a tablet; it checks 2 minutes after start.
+
 ## Leaving kiosk mode
 
 **Debug builds** (what you install today): from the computer, run

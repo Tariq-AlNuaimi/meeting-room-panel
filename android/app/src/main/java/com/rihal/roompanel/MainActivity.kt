@@ -26,6 +26,9 @@ import androidx.core.view.WindowInsetsCompat
 import androidx.core.view.WindowInsetsControllerCompat
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.ViewModelProvider
+import androidx.lifecycle.lifecycleScope
+import kotlinx.coroutines.delay
+import kotlinx.coroutines.launch
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.lifecycle.viewmodel.compose.viewModel
 import com.rihal.roompanel.data.AgendaRepository
@@ -33,6 +36,7 @@ import com.rihal.roompanel.data.DemoAgendaRepository
 import com.rihal.roompanel.data.DeviceCredentials
 import com.rihal.roompanel.data.RemoteAgendaRepository
 import com.rihal.roompanel.data.api.BackendClient
+import com.rihal.roompanel.kiosk.AppUpdater
 import com.rihal.roompanel.kiosk.KioskPolicy
 import com.rihal.roompanel.ui.PanelScreen
 import com.rihal.roompanel.ui.PanelTheme
@@ -54,6 +58,7 @@ class MainActivity : ComponentActivity() {
         super.onCreate(savedInstanceState)
         window.addFlags(WindowManager.LayoutParams.FLAG_KEEP_SCREEN_ON)
         hideSystemBars()
+        startUpdateChecks()
 
         setContent {
             PanelTheme {
@@ -119,6 +124,20 @@ class MainActivity : ComponentActivity() {
         PairingScreen(state, BuildConfig.BACKEND_URL.toUri().host ?: BuildConfig.BACKEND_URL)
     }
 
+    /** Paired Device Owner tablets check for a newer APK shortly after start, then every 6 hours. */
+    private fun startUpdateChecks() {
+        if (demoMode) return
+        lifecycleScope.launch {
+            delay(UPDATE_FIRST_CHECK_MILLIS)
+            while (true) {
+                if (credentials.token() != null) {
+                    AppUpdater(this@MainActivity, client(), BuildConfig.VERSION_CODE.toLong()).checkAndInstall()
+                }
+                delay(UPDATE_INTERVAL_MILLIS)
+            }
+        }
+    }
+
     override fun onResume() {
         super.onResume()
         kiosk.enter(this)
@@ -136,5 +155,10 @@ class MainActivity : ComponentActivity() {
     private fun <T : ViewModel> factory(create: () -> T) = object : ViewModelProvider.Factory {
         @Suppress("UNCHECKED_CAST")
         override fun <V : ViewModel> create(modelClass: Class<V>): V = create() as V
+    }
+
+    private companion object {
+        const val UPDATE_FIRST_CHECK_MILLIS = 2 * 60_000L
+        const val UPDATE_INTERVAL_MILLIS = 6 * 3_600_000L
     }
 }

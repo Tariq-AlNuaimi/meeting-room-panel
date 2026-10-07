@@ -43,12 +43,20 @@ data class MeetingDto(
     val joinUrl: String? = null,
     val bookedFromPanel: Boolean = false,
     val checkedIn: Boolean = false,
+    val releaseAt: String? = null,
 )
 
 @Serializable
 data class PairStartDto(val code: String, val pollToken: String, val expiresAt: String)
 
 /** `status` is pending | expired | consumed | paired; token fields only when paired. */
+/** `GET /api/device/app-update`: the APK this tablet should run, or null. */
+@Serializable
+data class AppUpdateDto(val versionCode: Int, val url: String, val sha256: String)
+
+@Serializable
+data class AppUpdateEnvelopeDto(val update: AppUpdateDto? = null)
+
 @Serializable
 data class PairPollDto(
     val status: String,
@@ -86,4 +94,5 @@ fun MeetingDto.toMeeting(): Meeting = Meeting(
     joinUrl = joinUrl,
     checkedIn = checkedIn,
     bookedFromPanel = bookedFromPanel,
+    releaseAt = releaseAt?.let(Instant::parse),
 )

@@ -20,8 +20,25 @@ android {
         buildConfigField("String", "BACKEND_URL", "\"$backendUrl\"")
     }
 
+    // Release signing from a keystore OUTSIDE the repo (never commit it). Every APK a tablet ever
+    // installs must be signed with this same key, or Android refuses the update.
+    //   ./gradlew assembleRelease -PreleaseKeystore=/path/room-panel.jks \
+    //     -PreleaseKeyAlias=room-panel -PreleaseStorePassword=... -PreleaseKeyPassword=...
+    val releaseKeystore = project.findProperty("releaseKeystore") as String?
+    if (releaseKeystore != null) {
+        signingConfigs {
+            create("release") {
+                storeFile = file(releaseKeystore)
+                keyAlias = project.property("releaseKeyAlias") as String
+                storePassword = project.property("releaseStorePassword") as String
+                keyPassword = project.property("releaseKeyPassword") as String
+            }
+        }
+    }
+
     buildTypes {
         release {
+            if (releaseKeystore != null) signingConfig = signingConfigs.getByName("release")
             isMinifyEnabled = true
             isShrinkResources = true
             proguardFiles(getDefaultProguardFile("proguard-android-optimize.txt"))
@@ -51,6 +68,7 @@ dependencies {
     implementation(libs.androidx.compose.material3)
     implementation(libs.kotlinx.coroutines.android)
     implementation(libs.kotlinx.serialization.json)
+    implementation(libs.zxing.core)
     debugImplementation(libs.androidx.compose.ui.tooling)
     debugImplementation(libs.androidx.compose.ui.test.manifest)
 

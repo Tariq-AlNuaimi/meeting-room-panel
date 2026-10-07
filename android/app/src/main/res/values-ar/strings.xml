@@ -50,4 +50,6 @@
     <string name="pair_connecting">جارٍ الاتصال…</string>
     <string name="pair_error">تعذّر الوصول إلى الخادم. تحقق من شبكة Wi-Fi؛ جارٍ إعادة المحاولة…</string>
     <string name="pair_server">الخادم: %1$s</string>
+    <string name="release_warning">سجّل الحضور قبل %1$s وإلا سيتم تحرير القاعة.</string>
+    <string name="scan_to_join">امسح للانضمام عبر Teams</string>
 </resources>

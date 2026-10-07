@@ -28,7 +28,9 @@ import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
+import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalConfiguration
 import androidx.compose.ui.res.pluralStringResource
@@ -43,6 +45,7 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.rihal.roompanel.R
 import com.rihal.roompanel.data.SyncProblem
+import com.rihal.roompanel.ui.qr.QrCode
 import com.rihal.roompanel.domain.AttendeeDisplay
 import com.rihal.roompanel.domain.Meeting
 import com.rihal.roompanel.domain.PanelConfig
@@ -197,23 +200,49 @@ private fun StaleBanner(problem: SyncProblem?) {
 
 @Composable
 private fun CurrentMeeting(meeting: Meeting, now: Instant, config: PanelConfig) {
-    Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
+    MeetingWithJoinCode(meeting) {
         WhiteText(meetingTitle(meeting), 40.sp, FontWeight.SemiBold)
         if (!meeting.isPrivate) meeting.organizer?.let { WhiteText(it, 24.sp) }
         WhiteText(
             "${timeRange(meeting)} · " + stringResource(R.string.minutes_left, minutesBetween(now, meeting.end)),
             24.sp,
         )
+        ReleaseWarning(meeting)
         Attendees(meeting, config.attendeeDisplay)
+    }
+}
+
+/** "Check in by 10:10 or the room is released": only when the room releases no-shows. */
+@Composable
+private fun ReleaseWarning(meeting: Meeting) {
+    val at = meeting.releaseAt ?: return
+    if (meeting.checkedIn) return
+    WhiteText(stringResource(R.string.release_warning, formatTime(at)), 22.sp, FontWeight.SemiBold)
+}
+
+/** Meeting details, with a Teams join QR beside them when the meeting has a link. */
+@Composable
+private fun MeetingWithJoinCode(meeting: Meeting, details: @Composable () -> Unit) {
+    val joinUrl = meeting.joinUrl?.takeIf { !meeting.isPrivate && it.startsWith("https://") }
+    Row(horizontalArrangement = Arrangement.spacedBy(32.dp), verticalAlignment = Alignment.CenterVertically) {
+        Column(Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(8.dp)) { details() }
+        if (joinUrl != null) {
+            Column(horizontalAlignment = Alignment.CenterHorizontally, verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                val label = stringResource(R.string.scan_to_join)
+                QrCode(joinUrl, 152.dp, label, Modifier.clip(RoundedCornerShape(8.dp)))
+                Text(label, color = Color.White, fontSize = 16.sp)
+            }
+        }
     }
 }
 
 @Composable
 private fun NextUp(meeting: Meeting, now: Instant, config: PanelConfig) {
-    Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
+    MeetingWithJoinCode(meeting) {
         WhiteText(stringResource(R.string.next_in_minutes, minutesBetween(now, meeting.start)), 24.sp)
         WhiteText(meetingTitle(meeting), 36.sp, FontWeight.SemiBold)
         WhiteText(timeRange(meeting), 24.sp)
+        ReleaseWarning(meeting)
         Attendees(meeting, config.attendeeDisplay)
     }
 }

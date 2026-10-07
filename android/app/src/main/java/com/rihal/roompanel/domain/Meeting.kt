@@ -23,6 +23,8 @@ data class Meeting(
     val checkedIn: Boolean = false,
     /** True when the panel created it (ad-hoc "book now"); only these may be extended or shortened in place. */
     val bookedFromPanel: Boolean = false,
+    /** When the room will release this meeting if nobody checks in (server rule); null = never. */
+    val releaseAt: Instant? = null,
 ) {
     init {
         require(end.isAfter(start)) { "Meeting $id must end after it starts" }

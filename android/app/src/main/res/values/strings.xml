@@ -46,4 +46,6 @@
     <string name="pair_connecting">Connecting…</string>
     <string name="pair_error">Can\'t reach the server. Check the Wi-Fi; retrying…</string>
     <string name="pair_server">Server: %1$s</string>
+    <string name="release_warning">Check in by %1$s or the room will be released.</string>
+    <string name="scan_to_join">Scan to join on Teams</string>
 </resources>
