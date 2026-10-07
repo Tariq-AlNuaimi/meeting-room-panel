@@ -115,4 +115,4 @@ Choose before Phase 3, because the LED adapter and Device Owner provisioning dep
 
 1. ~~Create the repo~~ — done. Android scaffold (Phase 2 shell with demo data) is in `android/`.
 2. Fork the template for the backend via `/new-project` (e.g. `meeting-room-backend`).
-3. Do Phase 0 with your M365 admin. The PowerShell is in [research/technical.md](research/technical.md).
+3. Do Phase 0 yourself (you are the tenant admin): follow [m365-setup.md](m365-setup.md).

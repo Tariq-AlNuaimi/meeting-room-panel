@@ -1,6 +1,6 @@
 # Technical research — Android panel + Microsoft 365 (Oct 2026)
 
-> Items marked **[verify]** come from the researcher's own knowledge or partner write-ups, not a Microsoft doc read directly — confirm in a test tenant before relying on them.
+> The step-by-step admin runbook, verified against Microsoft Learn, is [../m365-setup.md](../m365-setup.md). Items marked **[verify]** come from the researcher's own knowledge or partner write-ups, not a Microsoft doc read directly — confirm in a test tenant before relying on them.
 
 ## 1. Microsoft 365 setup
 
@@ -11,7 +11,7 @@
 ```powershell
 Set-CalendarProcessing -Identity boardroom@contoso.com -AutomateProcessing AutoAccept `
   -DeleteSubject $false -AddOrganizerToSubject $false -DeleteComments $false `
-  -RemovePrivateProperty $false -ProcessExternalMeetingMessages $true
+  -RemovePrivateProperty $false -ProcessExternalMeetingMessages $false
 ```
 
 `RemovePrivateProperty $false` keeps the private flag so the panel can mask private meetings. `DeleteComments $false` keeps the Teams join link in the room's copy.
@@ -26,7 +26,7 @@ Set-CalendarProcessing -Identity boardroom@contoso.com -AutomateProcessing AutoA
 | Book now                       | `POST /users/{room}/events`                                                                                                               | Room is organiser. **Check free/busy first** — a direct write skips conflict checking                |
 | Extend / end early (ad-hoc)    | `PATCH /users/{room}/events/{id}` new `end`                                                                                               | Clean only for room-organised events                                                                 |
 | Release someone else's meeting | `POST /users/{room}/events/{id}/decline` `sendResponse:true`                                                                              | Organiser is notified **[verify]**                                                                   |
-| Free/busy                      | `POST /users/{room}/calendar/getSchedule`                                                                                                 | App permission `Calendars.ReadBasic`                                                                 |
+| Free/busy                      | `POST /users/{room}/calendar/getSchedule`                                                                                                 | Covered by the scoped `Application Calendars.ReadWrite` role (there is no ReadBasic RBAC role)                                                                 |
 | Suggest times                  | `findMeetingTimes`                                                                                                                        | **No application permission** — use getSchedule instead                                              |
 | Incremental sync               | `GET /users/{room}/calendarView/delta`                                                                                                    | Store the deltaLink                                                                                  |
 | Push changes                   | `POST /subscriptions` on `/users/{room}/events`                                                                                           | Max lifetime ~7 days → renew via cron; handle `lifecycleNotificationUrl` (`missed` → delta catch-up) |
@@ -46,7 +46,7 @@ New-ManagementRoleAssignment -App <spObjectId> -Role "Application Calendars.Read
 Test-ServicePrincipalAuthorization -Identity <spObjectId> -Resource boardroom@contoso.com
 ```
 
-**[verify]** Entra and Exchange RBAC grants are additive: do **not** also admin-consent tenant-wide `Calendars.ReadWrite` in Entra, or the scope is meaningless. `Place.Read.All` (application) is granted in Entra. Prefer a certificate or Vercel OIDC workload identity federation over a client secret.
+**Confirmed (Microsoft FAQ):** Entra and Exchange RBAC grants are additive: do **not** also admin-consent tenant-wide `Calendars.ReadWrite` in Entra, or the scope is meaningless. `Place.Read.All` (application) is granted in Entra. Prefer a certificate or Vercel OIDC workload identity federation over a client secret.
 
 **The tablet never holds Microsoft credentials.** An APK is trivially decompiled, so a stolen tablet would give whoever has it read/write access to every room calendar. Instead:
 
