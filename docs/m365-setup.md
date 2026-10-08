@@ -1,5 +1,7 @@
 # Microsoft 365 setup (Phase 0)
 
+> **The easy way (2026-10-08):** in the admin portal open **Microsoft 365 → Start setup**, run the one PowerShell command it shows, and paste back the code it prints. That command runs `setup-m365.ps1` (served by the backend from `public/downloads/`), which does steps 2 and 4–6 below for you, with a certificate the portal generates. Its private key never leaves the server, and the app gets no Graph permission. This page is the manual reference behind it.
+
 This guide is for the tenant admin. Expect about an hour of hands-on work, plus up to 2 hours waiting for permissions to take effect.
 
 When you're done:

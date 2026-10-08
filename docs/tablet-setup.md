@@ -5,15 +5,31 @@ This turns an ordinary Android tablet (here a **Miulesight**) into a locked room
 - people can't leave the app, pull down notifications or reach Settings;
 - the screen stays on while charging and dims outside working hours.
 
-It uses Android's built-in **Device Owner** mode, so no MDM subscription is needed. You need a computer with [platform-tools (`adb`)](https://developer.android.com/tools/releases/platform-tools) and a USB cable. Allow about 20 minutes.
+It uses Android's built-in **Device Owner** mode, so no MDM subscription is needed.
 
-## 1. Check the tablet
+## Quick setup with a QR code (recommended, no computer needed)
+
+1. In the admin portal, open **Tablets → Set up a tablet**. Optionally type the Wi-Fi name and password (they only go into the QR code; the server never sees them).
+2. Factory-reset the tablet: **Settings → System → Reset options → Erase all data**.
+3. On the first **Welcome** screen, tap the same empty spot **6 times**. A QR scanner opens (on some tablets it first asks for Wi-Fi).
+4. Scan the code on the portal. The tablet downloads the panel app, makes it Device Owner and locks itself to it. This takes a few minutes.
+5. The tablet shows **Pair this tablet** and an 8-character code. In the portal click **Next: enter the tablet's code**, enter it, and choose the room.
+
+The QR code carries the signing-certificate checksum, so the tablet refuses any APK not signed with the release key. Later versions install themselves (see *Updating the app*).
+
+If tapping 6 times does nothing, the vendor removed QR setup from this tablet: use the cable method below.
+
+## Cable method (fallback)
+
+You need a computer with [platform-tools (`adb`)](https://developer.android.com/tools/releases/platform-tools) and a USB cable. Allow about 20 minutes.
+
+### 1. Check the tablet
 
 **Settings → About tablet → Android version** must be **9 or newer**. The app's `minSdk` is 28.
 
 Write down the version. If it's older, tell me: the app can't install, and that tablet can't run lock-task kiosk mode properly.
 
-## 2. Factory reset and skip accounts
+### 2. Factory reset and skip accounts
 
 Android only allows a Device Owner on a device with **no accounts**.
 
@@ -21,7 +37,7 @@ Android only allows a Device Owner on a device with **no accounts**.
 2. In the setup wizard, connect to Wi-Fi, but **skip the Google sign-in** and any vendor account. If the wizard insists, choose "Set up offline" or "Skip".
 3. Set **Date & time → Time zone: Muscat (GMT+4)** with automatic time on. The panel's clock and dimming depend on it.
 
-## 3. Turn on USB debugging
+### 3. Turn on USB debugging
 
 1. **Settings → About tablet** → tap **Build number** 7 times.
 2. **Settings → System → Developer options → USB debugging: on.**
@@ -31,12 +47,12 @@ Android only allows a Device Owner on a device with **no accounts**.
 adb devices          # should list the tablet as "device", not "unauthorized"
 ```
 
-## 4. Install and make it Device Owner
+### 4. Install and make it Device Owner
 
 ```bash
-cd meeting-room-panel/android
-./gradlew assembleDebug        # or download app-debug.apk from the latest CI run
-adb install -r app/build/outputs/apk/debug/app-debug.apk
+# The signed release APK the portal serves:
+curl -fLO https://meeting-room-backend-cyan.vercel.app/downloads/meeting-room-panel-0.3.0.apk
+adb install -r meeting-room-panel-0.3.0.apk
 adb shell dpm set-device-owner com.rihal.roompanel/.kiosk.PanelDeviceAdminReceiver
 ```
 
@@ -56,7 +72,7 @@ Open the app once (`adb shell monkey -p com.rihal.roompanel 1`, or tap the icon)
 - Press Home and swipe up: you should stay in the panel.
 - Reboot with `adb reboot`: the tablet should come straight back to the panel without a lock screen.
 
-## 5. Mount and power
+## Mount and power
 
 - **Keep it charging.** The screen only stays on while plugged in.
 - Consumer tablet batteries kept at 100% for months can swell. Use the tablet's battery-protection option if it has one (often "Protect battery" or "Charge to 85%"). Otherwise put the charger on a smart plug that turns off overnight. The panel dims outside working hours anyway.
@@ -66,13 +82,7 @@ Open the app once (`adb shell monkey -p com.rihal.roompanel 1`, or tap the icon)
 
 Paired tablets check the backend about 2 minutes after start and then every 6 hours. If you have published a newer version, the tablet downloads it, verifies its SHA-256 and installs it silently, then restarts the panel. This only works when the tablet is Device Owner.
 
-**One-time: create the release signing key.** Keep it in your password manager and **never** commit it. Every APK the tablet ever installs must be signed with this key, so if you lose it, every tablet has to be factory-reset and set up again.
-
-```bash
-keytool -genkeypair -v -keystore ~/room-panel.jks -alias room-panel -keyalg RSA -keysize 3072 -validity 10000
-```
-
-Install the **first** APK on each tablet as a release build signed with this key, using the same `adb install` / `dpm` steps as above but with `app-release.apk`. A debug build can't be upgraded by a release build.
+**The release signing key** (`room-panel.jks`, alias `room-panel`) was created on 2026-10-08 and sent to the operator with its password. Keep both in a password manager and **never** commit them. Every APK a tablet ever installs must be signed with this key; if it is lost, every tablet has to be factory-reset and set up again.
 
 **Each release:**
 
@@ -80,22 +90,19 @@ Install the **first** APK on each tablet as a release build signed with this key
 2. Build and sign the release APK:
    ```bash
    cd android
+   read -s -p "Keystore password: " PW; echo
    ./gradlew assembleRelease -PreleaseKeystore=$HOME/room-panel.jks -PreleaseKeyAlias=room-panel \
-     -PreleaseStorePassword=... -PreleaseKeyPassword=...
+     -PreleaseStorePassword="$PW" -PreleaseKeyPassword="$PW"; unset PW
    sha256sum app/build/outputs/apk/release/app-release.apk
    ```
-3. Upload `app-release.apk` anywhere the tablets can download it over **https**. For example, attach it to a GitHub release of a **public** repo, or put it in any static file host.
-4. In Vercel → `meeting-room-backend` → Settings → Environment Variables, set:
-   - `APP_UPDATE_VERSION_CODE` to the new `versionCode`
-   - `APP_UPDATE_URL` to the https link
-   - `APP_UPDATE_SHA256` to the hash from step 2
+3. In `meeting-room-backend`, copy it to `public/downloads/meeting-room-panel-<version>.apk` and update `lib/device/release.ts` (`versionCode`, `versionName`, `path`, `sha256`; the signature checksum stays the same while the key does). Push and merge: the deploy serves the new APK, the QR code points at it, and paired tablets update themselves.
+4. Tablets pick it up within 6 hours. To force it sooner, reboot a tablet; it checks 2 minutes after start.
 
-   Then redeploy.
-5. Tablets pick it up within 6 hours. To force it sooner, reboot a tablet; it checks 2 minutes after start.
+(The `APP_UPDATE_VERSION_CODE` / `APP_UPDATE_URL` / `APP_UPDATE_SHA256` env vars still override the bundled release, e.g. to roll back without a deploy.)
 
 ## Leaving kiosk mode
 
-**Debug builds** (what you install today): from the computer, run
+**Debug builds** (development only): from the computer, run
 
 ```bash
 adb shell am broadcast -n com.rihal.roompanel/.kiosk.DebugKioskExitReceiver -a com.rihal.roompanel.EXIT_KIOSK
@@ -103,9 +110,9 @@ adb shell am broadcast -n com.rihal.roompanel/.kiosk.DebugKioskExitReceiver -a c
 adb shell am broadcast -n com.rihal.roompanel/.kiosk.DebugKioskExitReceiver -a com.rihal.roompanel.EXIT_KIOSK --ez relinquish true
 ```
 
-USB debugging must still be on. Leave it on during the pilot, and keep the tablet physically secured.
+USB debugging must still be on.
 
-**Release builds** have no exit receiver. The way out is a factory reset (most tablets: hold **Power + Volume Up** at boot → *Wipe data*). A remote "unlock" command from the admin page is planned with the backend.
+**Release builds** (what the portal installs) have no exit receiver. The way out is a factory reset (most tablets: hold **Power + Volume Up** at boot → *Wipe data*). A remote "unlock" command from the admin page is planned with the backend.
 
 ## Troubleshooting
 
