@@ -26,6 +26,17 @@ class KioskPolicy(context: Context) {
     /** Idempotent: safe to call on every resume. */
     fun enter(activity: Activity) {
         if (!isDeviceOwner) return
+        configure()
+        val am = app.getSystemService(ActivityManager::class.java)
+        if (am.lockTaskModeState == ActivityManager.LOCK_TASK_MODE_NONE) activity.startLockTask()
+    }
+
+    /**
+     * The device-wide lock-down without pinning an activity. QR provisioning calls this before
+     * the panel has ever run, so the first screen after setup is already the panel.
+     */
+    fun configure() {
+        if (!isDeviceOwner) return
         dpm.setLockTaskPackages(admin, arrayOf(app.packageName))
         // No home/recents/notifications/global-actions while pinned; power button still turns the screen off.
         dpm.setLockTaskFeatures(admin, DevicePolicyManager.LOCK_TASK_FEATURE_NONE)
@@ -45,8 +56,6 @@ class KioskPolicy(context: Context) {
             Settings.Global.STAY_ON_WHILE_PLUGGED_IN,
             (BatteryManager.BATTERY_PLUGGED_AC or BatteryManager.BATTERY_PLUGGED_USB or BatteryManager.BATTERY_PLUGGED_WIRELESS).toString(),
         )
-        val am = app.getSystemService(ActivityManager::class.java)
-        if (am.lockTaskModeState == ActivityManager.LOCK_TASK_MODE_NONE) activity.startLockTask()
     }
 
     /**
