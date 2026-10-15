@@ -120,8 +120,9 @@ Paired tablets check the backend about 2 minutes after start and then every 6 ho
      -PreleaseStorePassword="$PW" -PreleaseKeyPassword="$PW"; unset PW
    sha256sum app/build/outputs/apk/release/app-release.apk
    ```
-3. In `meeting-room-backend`, copy it to `public/downloads/meeting-room-panel-<version>.apk` and update `lib/device/release.ts` (`versionCode`, `versionName`, `path`, `sha256`; the signature checksum stays the same while the key does). Push and merge: the deploy serves the new APK, the QR code points at it, and paired tablets update themselves.
-4. Tablets pick it up within 6 hours. To force it sooner, reboot a tablet; it checks 2 minutes after start.
+3. In `meeting-room-backend`, copy it to `public/downloads/meeting-room-panel-<version>.apk` and set `PILOT_RELEASE` in `lib/device/release.ts` (`versionCode`, `versionName`, `path`, `sha256`; the signature checksum stays the same while the key does). Push and merge.
+4. **One tablet first.** In the portal, **Tablets → Test version** on one tablet. Only that tablet installs the new version (within 6 hours, or 2 minutes after you restart it). Try it at the door: book, check in, extend, end.
+5. **Everyone.** When it works, copy the `PILOT_RELEASE` values into `BUNDLED_RELEASE`, push and merge. Every tablet updates within 6 hours, and the QR setup installs the new version. Set the pilot tablet **Back to normal**.
 
 (The `APP_UPDATE_VERSION_CODE` / `APP_UPDATE_URL` / `APP_UPDATE_SHA256` env vars still override the bundled release, e.g. to roll back without a deploy.)
 
