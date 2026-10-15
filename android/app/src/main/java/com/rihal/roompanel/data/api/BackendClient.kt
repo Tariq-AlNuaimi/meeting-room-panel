@@ -3,6 +3,7 @@ package com.rihal.roompanel.data.api
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
 import kotlinx.serialization.KSerializer
+import kotlinx.serialization.json.JsonElement
 import java.io.IOException
 import java.net.HttpURLConnection
 import java.net.URL
@@ -16,17 +17,30 @@ class ApiException(val status: Int, val code: String?, message: String) : Except
  * credentials ever pass through here: the device token is the only secret, sent as a bearer.
  */
 class BackendClient(
-    private val baseUrl: String,
+    private val baseUrl: () -> String,
     private val appVersion: String,
     private val tokenProvider: () -> String?,
 ) {
+    constructor(baseUrl: String, appVersion: String, tokenProvider: () -> String?) :
+        this({ baseUrl }, appVersion, tokenProvider)
+
+    /** True when this portal recognises the tablet's token (`/api/device/ping`). */
+    suspend fun ping(): Boolean = try {
+        get("/api/device/ping", JsonElement.serializer())
+        true
+    } catch (_: ApiException) {
+        false
+    } catch (_: IOException) {
+        false
+    }
+
     suspend fun <T> get(path: String, serializer: KSerializer<T>): T = call("GET", path, null, serializer)
 
     suspend fun <T> post(path: String, body: String?, serializer: KSerializer<T>): T = call("POST", path, body, serializer)
 
     /** Raw bytes (branding images), at most [maxBytes]. */
     suspend fun getBytes(path: String, maxBytes: Int = 2 * 1024 * 1024): ByteArray = withContext(Dispatchers.IO) {
-        val conn = (URL(baseUrl.trimEnd('/') + path).openConnection() as HttpURLConnection).apply {
+        val conn = (URL(baseUrl().trimEnd('/') + path).openConnection() as HttpURLConnection).apply {
             connectTimeout = 10_000
             readTimeout = 20_000
             setRequestProperty("X-App-Version", appVersion)
@@ -53,7 +67,7 @@ class BackendClient(
 
     private suspend fun <T> call(method: String, path: String, body: String?, serializer: KSerializer<T>): T =
         withContext(Dispatchers.IO) {
-            val conn = (URL(baseUrl.trimEnd('/') + path).openConnection() as HttpURLConnection).apply {
+            val conn = (URL(baseUrl().trimEnd('/') + path).openConnection() as HttpURLConnection).apply {
                 requestMethod = method
                 connectTimeout = 10_000
                 readTimeout = 20_000

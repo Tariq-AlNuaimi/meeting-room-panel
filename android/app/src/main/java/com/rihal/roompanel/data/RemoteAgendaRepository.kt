@@ -26,6 +26,7 @@ import kotlin.coroutines.cancellation.CancellationException
 class RemoteAgendaRepository(
     private val client: BackendClient,
     private val clock: Clock = Clock.systemUTC(),
+    private val mover: ServerMover? = null,
 ) : AgendaRepository {
 
     private val mutable = MutableStateFlow(AgendaState())
@@ -45,6 +46,8 @@ class RemoteAgendaRepository(
                 lastSyncedAt = clock.instant(),
                 problem = null,
             )
+            // The portal is moving: switch once the new address knows this tablet (never throws).
+            mover?.consider(agenda.move?.url)
         } catch (e: CancellationException) {
             throw e
         } catch (e: Exception) {

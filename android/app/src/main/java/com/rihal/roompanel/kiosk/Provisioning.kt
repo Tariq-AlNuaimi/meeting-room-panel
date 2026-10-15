@@ -2,9 +2,13 @@ package com.rihal.roompanel.kiosk
 
 import android.app.Activity
 import android.app.admin.DevicePolicyManager
+import android.content.Context
 import android.content.Intent
 import android.os.Build
 import android.os.Bundle
+import android.os.PersistableBundle
+import com.rihal.roompanel.data.ServerAddress
+import com.rihal.roompanel.domain.normalizeServerUrl
 import androidx.annotation.RequiresApi
 
 /*
@@ -35,8 +39,29 @@ internal fun provisioningModeResult(): Intent =
 class PolicyComplianceActivity : Activity() {
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
+        rememberProvisionedServer(this, intent)
         KioskPolicy(this).configure()
         setResult(RESULT_OK)
         finish()
     }
 }
+
+/**
+ * The portal that made the setup QR code (`server_url` in the admin extras), so a tablet set up
+ * from a new portal talks to it without a rebuilt APK. Ignored unless it is a clean https address.
+ */
+internal fun provisionedServerUrl(intent: Intent?): String? {
+    val extras: PersistableBundle? = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
+        intent?.getParcelableExtra(DevicePolicyManager.EXTRA_PROVISIONING_ADMIN_EXTRAS_BUNDLE, PersistableBundle::class.java)
+    } else {
+        @Suppress("DEPRECATION")
+        intent?.getParcelableExtra(DevicePolicyManager.EXTRA_PROVISIONING_ADMIN_EXTRAS_BUNDLE)
+    }
+    return normalizeServerUrl(extras?.getString(SERVER_URL_EXTRA))
+}
+
+internal fun rememberProvisionedServer(context: Context, intent: Intent?) {
+    provisionedServerUrl(intent)?.let { ServerAddress(context).save(it) }
+}
+
+internal const val SERVER_URL_EXTRA = "server_url"

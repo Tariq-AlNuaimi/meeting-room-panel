@@ -51,8 +51,8 @@ adb devices          # should list the tablet as "device", not "unauthorized"
 
 ```bash
 # The signed release APK the portal serves:
-curl -fLO https://meeting-room-backend-cyan.vercel.app/downloads/meeting-room-panel-0.3.0.apk
-adb install -r meeting-room-panel-0.3.0.apk
+curl -fLO https://meeting-room-backend-cyan.vercel.app/downloads/meeting-room-panel-0.4.1.apk
+adb install -r meeting-room-panel-0.4.1.apk
 adb shell dpm set-device-owner com.rihal.roompanel/.kiosk.PanelDeviceAdminReceiver
 ```
 
@@ -139,6 +139,14 @@ adb shell am broadcast -n com.rihal.roompanel/.kiosk.DebugKioskExitReceiver -a c
 USB debugging must still be on.
 
 **Release builds** (what the portal installs) have no exit receiver. The way out is a factory reset (most tablets: hold **Power + Volume Up** at boot → *Wipe data*). A remote "unlock" command from the admin page is planned with the backend.
+
+## The portal's address (moving the portal)
+
+From app 0.4.1 the portal's address is not fixed in the app:
+
+- **QR setup** tells the tablet which portal made the QR code. A tablet set up from a portal on IT's own server talks to that server, with no rebuilt APK.
+- **Moving the portal** (new server or domain): in the old portal, **Setup checks → Move tablets to a new address**. Each tablet switches only once the new portal recognises its token, which proves the database was copied there; until then it stays where it is and asks again every 10 minutes. The full runbook is `docs/self-hosting.md` in `meeting-room-backend`.
+- **Cable setup** starts with the address the APK was built with (`-PbackendUrl`, default the Vercel portal). After the portal has moved, set tablets up with the QR code from the new portal instead.
 
 ## Checking tablets from the portal
 

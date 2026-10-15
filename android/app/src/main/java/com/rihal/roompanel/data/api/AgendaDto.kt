@@ -29,7 +29,12 @@ data class AgendaDto(
     val panel: PanelDto? = null,
     /** Only while the portal shows guest Wi-Fi on this room. */
     val guestWifi: GuestWifiDto? = null,
+    /** Set while the portal moves to a new address (backend docs/self-hosting.md). */
+    val move: MoveDto? = null,
 )
+
+@Serializable
+data class MoveDto(val url: String)
 
 @Serializable
 data class ImageRefDto(val url: String, val version: String)

@@ -11,6 +11,7 @@ class PanelDeviceAdminReceiver : DeviceAdminReceiver() {
 
     /** End of QR setup on Android 9, which has no [PolicyComplianceActivity] step: lock down and open the panel. */
     override fun onProfileProvisioningComplete(context: Context, intent: Intent) {
+        rememberProvisionedServer(context, intent)
         KioskPolicy(context).configure()
         // Android 10+ finishes setup through PolicyComplianceActivity and then opens the home
         // screen, which is the panel; launching from here would land mid-wizard.

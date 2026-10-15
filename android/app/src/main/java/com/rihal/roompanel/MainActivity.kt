@@ -34,6 +34,8 @@ import androidx.lifecycle.viewmodel.compose.viewModel
 import com.rihal.roompanel.data.AgendaRepository
 import com.rihal.roompanel.data.DemoAgendaRepository
 import com.rihal.roompanel.data.DeviceCredentials
+import com.rihal.roompanel.data.ServerAddress
+import com.rihal.roompanel.data.ServerMover
 import com.rihal.roompanel.data.RemoteAgendaRepository
 import com.rihal.roompanel.data.api.BackendClient
 import com.rihal.roompanel.kiosk.AppUpdater
@@ -49,11 +51,17 @@ class MainActivity : ComponentActivity() {
 
     private val kiosk by lazy { KioskPolicy(this) }
     private val credentials by lazy { DeviceCredentials(this) }
+    private val server by lazy { ServerAddress(this) }
 
     /** `-PbackendUrl=demo` builds a self-contained demo (no backend, sample meetings). */
     private val demoMode get() = BuildConfig.BACKEND_URL == "demo"
 
-    private fun client() = BackendClient(BuildConfig.BACKEND_URL, BuildConfig.VERSION_NAME) { credentials.token() }
+    /** Reads the portal address on every request, so a verified move applies at once. */
+    private fun client() = BackendClient({ server.current() }, BuildConfig.VERSION_NAME) { credentials.token() }
+
+    private fun mover() = ServerMover(server, ping = { url ->
+        BackendClient(url, BuildConfig.VERSION_NAME) { credentials.token() }.ping()
+    })
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
@@ -69,7 +77,7 @@ class MainActivity : ComponentActivity() {
                 if (paired) {
                     PanelRoute(
                         session = session,
-                        repository = { if (demoMode) DemoAgendaRepository(getString(R.string.demo_room_name)) else RemoteAgendaRepository(client()) },
+                        repository = { if (demoMode) DemoAgendaRepository(getString(R.string.demo_room_name)) else RemoteAgendaRepository(client(), mover = mover()) },
                         onUnpaired = {
                             // Revoked in the portal, or its room deleted: forget the token and pair again.
                             credentials.clear()
@@ -128,7 +136,7 @@ class MainActivity : ComponentActivity() {
             factory = factory { PairingViewModel(client(), onPaired) },
         )
         val state by vm.state.collectAsStateWithLifecycle()
-        PairingScreen(state, BuildConfig.BACKEND_URL.toUri().host ?: BuildConfig.BACKEND_URL)
+        PairingScreen(state, server.current().toUri().host ?: server.current())
     }
 
     /** Paired Device Owner tablets check for a newer APK shortly after start, then every 6 hours. */

@@ -34,4 +34,25 @@ class ProvisioningTest {
         assertEquals(Activity.RESULT_OK, shadowOf(activity).resultCode)
         assertTrue(activity.isFinishing)
     }
+
+    @Test
+    fun setupRemembersThePortalFromTheQrCode() {
+        val ctx = org.robolectric.RuntimeEnvironment.getApplication()
+        val intent = android.content.Intent().putExtra(
+            DevicePolicyManager.EXTRA_PROVISIONING_ADMIN_EXTRAS_BUNDLE,
+            android.os.PersistableBundle().apply { putString(SERVER_URL_EXTRA, "https://Rooms.Example.com/") },
+        )
+        Robolectric.buildActivity(PolicyComplianceActivity::class.java, intent).setup()
+        assertEquals("https://rooms.example.com", com.rihal.roompanel.data.ServerAddress(ctx).current())
+    }
+
+    @Test
+    fun anUnsafeQrAddressIsIgnored() {
+        val intent = android.content.Intent().putExtra(
+            DevicePolicyManager.EXTRA_PROVISIONING_ADMIN_EXTRAS_BUNDLE,
+            android.os.PersistableBundle().apply { putString(SERVER_URL_EXTRA, "http://evil.example.com") },
+        )
+        assertEquals(null, provisionedServerUrl(intent))
+        assertEquals(null, provisionedServerUrl(null))
+    }
 }

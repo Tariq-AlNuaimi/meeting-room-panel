@@ -74,6 +74,13 @@ class AgendaDtoTest {
     fun `event ids are path-encoded (Graph ids contain slash, plus and equals)`() {
         assertEquals("/api/device/events/AAMk%2Fab%2Bc%3D%3D/end", BackendClient.eventPath("AAMk/ab+c==", "end"))
     }
+    @Test
+    fun `a portal move is read when present and absent otherwise`() {
+        val withMove = agendaJson.replaceFirst("\"serverTime\"", "\"move\":{\"url\":\"https://new.example.com\"},\"serverTime\"")
+        assertEquals("https://new.example.com", ApiJson.decodeFromString(Envelope.serializer(AgendaDto.serializer()), withMove).data!!.move?.url)
+        assertEquals(null, ApiJson.decodeFromString(Envelope.serializer(AgendaDto.serializer()), agendaJson).data!!.move)
+    }
+
 }
 
 /** Backend 0.4 adds the portal's settings to the agenda; older backends simply omit them. */
