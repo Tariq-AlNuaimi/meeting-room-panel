@@ -11,6 +11,12 @@ object StatusColors {
     val Free = Color(0xFF1B7A3A)
     val StartingSoon = Color(0xFF8F5300)
     val Busy = Color(0xFFB3261E)
+    /** Maintenance: slate grey, 7.4:1 with white. */
+    val OutOfService = Color(0xFF4A5560)
+    /** Default accent until the portal sets a brand colour (6.6:1 with white). */
+    val DefaultBrand = Color(0xFF0B5CAD)
+    /** The end-of-meeting warning: dark amber, 5.9:1 with white. */
+    val Warning = Color(0xFF8F5300)
 
     fun of(status: RoomStatus): Color = when (status) {
         is RoomStatus.Free -> Free

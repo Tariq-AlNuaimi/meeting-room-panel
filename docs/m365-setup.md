@@ -156,6 +156,18 @@ Book a test meeting with the room from Outlook first. Its **real subject** shoul
 
 Set them with `vercel env add` (or in the Vercel dashboard). Then delete the local `.key` file, or move it to your password manager.
 
+## Renewing the certificate (every 2 years)
+
+The portal's certificate is valid for two years; **Microsoft 365** shows its expiry date. To renew without an outage:
+
+1. Portal → **Setup checks → Renew certificate**. The portal makes a new certificate *next to* the current one; the current one keeps working.
+2. Copy the command shown and run it in a **new** PowerShell window, signed in as an Application Administrator or Global Administrator. It runs `renew-m365-cert.ps1`, which only **adds** the new public certificate to the existing "Meeting Room Panel" app. It grants no permission and changes no Exchange setting or room. If Microsoft does not return the current certificate, the script stops and changes nothing.
+3. Back in the portal, click **Finish renewal**. The portal signs in with the new certificate and switches only if that works; otherwise it says "not yet" (Microsoft can take a few minutes).
+
+Each step is recorded in the audit log. The app still has **no** Microsoft Graph permissions; access stays limited to room mailboxes by the Exchange scope above, and the setup script's check that a person's mailbox is unreachable is unchanged.
+
+**Check room access** on the same page signs in and reads one minute of each room's calendar, any time.
+
 ## Undo
 
 ```powershell

@@ -24,6 +24,33 @@ class BackendClient(
 
     suspend fun <T> post(path: String, body: String?, serializer: KSerializer<T>): T = call("POST", path, body, serializer)
 
+    /** Raw bytes (branding images), at most [maxBytes]. */
+    suspend fun getBytes(path: String, maxBytes: Int = 2 * 1024 * 1024): ByteArray = withContext(Dispatchers.IO) {
+        val conn = (URL(baseUrl.trimEnd('/') + path).openConnection() as HttpURLConnection).apply {
+            connectTimeout = 10_000
+            readTimeout = 20_000
+            setRequestProperty("X-App-Version", appVersion)
+            tokenProvider()?.let { setRequestProperty("Authorization", "Bearer $it") }
+        }
+        try {
+            val status = conn.responseCode
+            if (status !in 200..299) throw ApiException(status, null, "HTTP $status")
+            conn.inputStream.use { input ->
+                val out = java.io.ByteArrayOutputStream()
+                val buf = ByteArray(16 * 1024)
+                while (true) {
+                    val n = input.read(buf)
+                    if (n < 0) break
+                    out.write(buf, 0, n)
+                    if (out.size() > maxBytes) throw ApiException(status, "too_large", "Image too large")
+                }
+                out.toByteArray()
+            }
+        } finally {
+            conn.disconnect()
+        }
+    }
+
     private suspend fun <T> call(method: String, path: String, body: String?, serializer: KSerializer<T>): T =
         withContext(Dispatchers.IO) {
             val conn = (URL(baseUrl.trimEnd('/') + path).openConnection() as HttpURLConnection).apply {

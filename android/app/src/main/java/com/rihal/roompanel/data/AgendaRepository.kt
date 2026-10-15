@@ -1,5 +1,7 @@
 package com.rihal.roompanel.data
 
+import com.rihal.roompanel.domain.FreeRoom
+import com.rihal.roompanel.domain.IssueCategory
 import com.rihal.roompanel.domain.Meeting
 import com.rihal.roompanel.domain.PanelConfig
 import kotlinx.coroutines.flow.StateFlow
@@ -36,8 +38,15 @@ interface AgendaRepository {
     val state: StateFlow<AgendaState>
 
     suspend fun refresh()
-    suspend fun bookNow(minutes: Int): Result<Unit>
+
+    /** Book from now ([start] null) or from a later quarter hour today/tomorrow, titled by preset [presetIndex]. */
+    suspend fun bookNow(minutes: Int, start: Instant? = null, presetIndex: Int? = null): Result<Unit>
     suspend fun extend(meetingId: String, minutes: Int): Result<Unit>
     suspend fun endEarly(meetingId: String): Result<Unit>
     suspend fun checkIn(meetingId: String): Result<Unit>
+    suspend fun freeRooms(): Result<List<FreeRoom>>
+    suspend fun reportIssue(category: IssueCategory): Result<Unit>
+
+    /** A branding image by its server path, or null if it can't be fetched (the panel just goes without). */
+    suspend fun image(path: String): ByteArray?
 }

@@ -1,8 +1,16 @@
 package com.rihal.roompanel.data
 
 import com.rihal.roompanel.domain.AttendeeDisplay
+import com.rihal.roompanel.domain.Branding
+import com.rihal.roompanel.domain.Equipment
+import com.rihal.roompanel.domain.FreeRoom
+import com.rihal.roompanel.domain.GuestWifi
+import com.rihal.roompanel.domain.IssueCategory
 import com.rihal.roompanel.domain.Meeting
 import com.rihal.roompanel.domain.PanelConfig
+import com.rihal.roompanel.domain.WorkingHours
+import java.time.DayOfWeek
+import java.time.LocalTime
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
@@ -19,7 +27,21 @@ class DemoAgendaRepository(
     private val clock: Clock = Clock.systemDefaultZone(),
 ) : AgendaRepository {
 
-    private val config = PanelConfig(roomName = roomName, attendeeDisplay = AttendeeDisplay.NAMES)
+    private val config = PanelConfig(
+        roomName = roomName,
+        attendeeDisplay = AttendeeDisplay.NAMES,
+        // Open every day, all day, so the demo always has free slots to tap.
+        workingHours = WorkingHours(DayOfWeek.entries.toSet(), LocalTime.MIN, LocalTime.of(23, 59)),
+        floor = "2nd floor",
+        capacity = 8,
+        equipment = setOf(Equipment.SCREEN, Equipment.VIDEO),
+        branding = Branding(
+            welcomeMessage = "Welcome to Rihal",
+            visitorNotice = "Guests, please sign in at reception.",
+            titlePresets = listOf("Quick meeting", "Client call", "Interview", "Team huddle"),
+        ),
+        guestWifi = GuestWifi("Rihal-Guest", "demo-password"),
+    )
     private val meetingsFlow = MutableStateFlow(seed(clock.instant().truncatedTo(ChronoUnit.MINUTES)))
     private val mutable = MutableStateFlow(AgendaState(config, meetingsFlow.value, clock.instant()))
     override val state: StateFlow<AgendaState> = mutable.asStateFlow()
@@ -28,15 +50,15 @@ class DemoAgendaRepository(
         mutable.value = AgendaState(config, meetingsFlow.value, clock.instant())
     }
 
-    override suspend fun bookNow(minutes: Int): Result<Unit> {
-        val now = clock.instant().truncatedTo(ChronoUnit.MINUTES)
+    override suspend fun bookNow(minutes: Int, start: Instant?, presetIndex: Int?): Result<Unit> {
+        val from = start ?: clock.instant().truncatedTo(ChronoUnit.MINUTES)
         val meeting = Meeting(
             id = UUID.randomUUID().toString(),
-            subject = null,
+            subject = presetIndex?.let { config.branding.titlePresets.getOrNull(it) },
             organizer = null,
-            start = now,
-            end = now.plus(Duration.ofMinutes(minutes.toLong())),
-            checkedIn = true,
+            start = from,
+            end = from.plus(Duration.ofMinutes(minutes.toLong())),
+            checkedIn = start == null,
             bookedFromPanel = true,
         )
         meetingsFlow.update { (it + meeting).sortedBy(Meeting::start) }
@@ -64,6 +86,17 @@ class DemoAgendaRepository(
     }
 
     override suspend fun checkIn(meetingId: String): Result<Unit> = edit(meetingId) { it.copy(checkedIn = true) }
+
+    override suspend fun freeRooms(): Result<List<FreeRoom>> = Result.success(
+        listOf(
+            FreeRoom("Majlis", "Ground floor", 12, clock.instant().plus(Duration.ofMinutes(90))),
+            FreeRoom("Focus Room", "2nd floor", 4, null),
+        ),
+    )
+
+    override suspend fun reportIssue(category: IssueCategory): Result<Unit> = Result.success(Unit)
+
+    override suspend fun image(path: String): ByteArray? = null
 
     private fun edit(id: String, change: (Meeting) -> Meeting): Result<Unit> {
         meetingsFlow.update { list -> list.map { if (it.id == id) change(it) else it } }

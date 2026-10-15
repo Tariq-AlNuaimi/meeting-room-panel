@@ -38,6 +38,7 @@ import com.rihal.roompanel.data.RemoteAgendaRepository
 import com.rihal.roompanel.data.api.BackendClient
 import com.rihal.roompanel.kiosk.AppUpdater
 import com.rihal.roompanel.kiosk.KioskPolicy
+import com.rihal.roompanel.ui.PanelActions
 import com.rihal.roompanel.ui.PanelScreen
 import com.rihal.roompanel.ui.PanelTheme
 import com.rihal.roompanel.ui.PanelViewModel
@@ -104,14 +105,20 @@ class MainActivity : ComponentActivity() {
         LaunchedEffect(current.brightness) {
             window.attributes = window.attributes.apply { screenBrightness = current.brightness }
         }
-        PanelScreen(
-            state = current,
-            onBook = vm::bookNow,
-            onExtend = vm::extend,
-            onEnd = vm::endEarly,
-            onCheckIn = vm::checkIn,
-            onDismissError = vm::dismissError,
-        )
+        val freeRooms by vm.freeRooms.collectAsStateWithLifecycle()
+        val actions = remember(vm) {
+            PanelActions(
+                onBook = vm::book,
+                onExtend = vm::extend,
+                onEnd = vm::endEarly,
+                onCheckIn = vm::checkIn,
+                onReport = vm::reportIssue,
+                onOpenFreeRooms = vm::openFreeRooms,
+                onCloseFreeRooms = vm::closeFreeRooms,
+                onDismissFeedback = vm::dismissFeedback,
+            )
+        }
+        PanelScreen(state = current, actions = actions, freeRooms = freeRooms)
     }
 
     @Composable

@@ -8,8 +8,6 @@
     <string name="status_busy">مشغولة</string>
 
     <string name="free_rest_of_day">متاحة لبقية اليوم</string>
-    <string name="next_in_minutes">الاجتماع التالي بعد %d دقيقة</string>
-    <string name="minutes_left">متبقٍ %d دقيقة</string>
     <string name="minutes_short">%d دقيقة</string>
     <plurals name="attendee_count">
         <item quantity="zero">لا يوجد حضور</item>
@@ -21,7 +19,6 @@
     </plurals>
 
     <string name="today">اليوم</string>
-    <string name="no_more_meetings">لا توجد اجتماعات أخرى اليوم</string>
     <string name="private_meeting">اجتماع خاص</string>
     <string name="adhoc_meeting">حجز فوري</string>
     <string name="untitled_meeting">اجتماع</string>
@@ -31,9 +28,6 @@
     <string name="extend_minutes">+%d دقيقة</string>
     <string name="end_now">إنهاء الآن</string>
     <string name="no_time_available">لا يوجد وقت متاح قبل الاجتماع التالي.</string>
-    <string name="cancel">إلغاء</string>
-    <string name="ok">حسنًا</string>
-    <string name="action_failed">تعذّر تنفيذ الإجراء</string>
 
     <string name="error_conflict">حجز شخص آخر القاعة لهذا الوقت للتو. اختر مدة أقصر.</string>
     <string name="error_offline">اللوحة غير متصلة. حاول مرة أخرى بعد قليل.</string>
@@ -52,4 +46,67 @@
     <string name="pair_server">الخادم: %1$s</string>
     <string name="release_warning">سجّل الحضور قبل %1$s وإلا سيتم تحرير القاعة.</string>
     <string name="scan_to_join">امسح للانضمام عبر Teams</string>
+
+    <!-- Release 0.4 -->
+    <string name="status_out_of_service">خارج الخدمة</string>
+    <string name="free_until">متاحة حتى %1$s</string>
+    <string name="busy_until">مشغولة حتى %1$s</string>
+    <string name="out_of_service_default">هذه القاعة غير متاحة حاليًا.</string>
+    <string name="tomorrow">غدًا</string>
+    <string name="day_closed">مغلق</string>
+    <string name="no_meetings_day">لا توجد اجتماعات</string>
+    <string name="free_slot">متاحة %1$s – %2$s</string>
+    <string name="free_now">متاحة الآن حتى %1$s</string>
+    <string name="tap_to_book">احجز</string>
+    <string name="book_room">احجز %1$s</string>
+    <string name="book_from">احجز من %1$s</string>
+    <string name="pick_title">العنوان في Outlook</string>
+    <string name="how_long">كم المدة؟</string>
+    <string name="until_time">حتى %1$s</string>
+    <string name="close">إغلاق</string>
+    <string name="working">لحظة من فضلك…</string>
+    <string name="booked_until">تم الحجز حتى %1$s</string>
+    <string name="booked_later">تم الحجز %1$s – %2$s</string>
+    <string name="extended_until">تم التمديد حتى %1$s</string>
+    <string name="ended_done">تم تحرير القاعة. شكرًا لك.</string>
+    <string name="checked_in_done">تم تسجيل الحضور.</string>
+    <string name="reported_done">شكرًا. تم إبلاغ فريق المكتب.</string>
+    <string name="ends_in">ينتهي بعد %1$d دقيقة</string>
+    <string name="next_meeting">التالي: %1$s · %2$s</string>
+    <string name="find_room">ابحث عن قاعة متاحة</string>
+    <string name="free_rooms_title">القاعات المتاحة الآن</string>
+    <string name="free_rooms_none">لا توجد قاعة أخرى متاحة الآن.</string>
+    <string name="free_rooms_failed">تعذّر التحقق من القاعات الأخرى. حاول بعد قليل.</string>
+    <string name="free_for_rest_of_day_short">متاحة لبقية اليوم</string>
+    <string name="report_problem">الإبلاغ عن مشكلة</string>
+    <string name="report_title">ما المشكلة في هذه القاعة؟</string>
+    <string name="issue_AV">الشاشة أو الصوت</string>
+    <string name="issue_VIDEO_CALL">معدات مكالمات الفيديو</string>
+    <string name="issue_CLEANING">تحتاج تنظيفًا</string>
+    <string name="issue_SUPPLIES">مستلزمات (أقلام، كابلات)</string>
+    <string name="issue_TEMPERATURE">حارة جدًا أو باردة جدًا</string>
+    <string name="issue_OTHER">شيء آخر</string>
+    <string name="guest_wifi">شبكة الضيوف</string>
+    <string name="guest_wifi_scan">امسح للاتصال بـ %1$s</string>
+    <string name="equipment_SCREEN">شاشة</string>
+    <string name="equipment_VIDEO">فيديو</string>
+    <string name="equipment_WHITEBOARD">سبورة</string>
+    <string name="equipment_PHONE">هاتف</string>
+    <string name="equipment_ACCESSIBLE">مهيأة لذوي الإعاقة</string>
+    <string name="error_booking_disabled">الحجز من هذا الجهاز متوقف.</string>
+    <string name="error_out_of_service">هذه القاعة خارج الخدمة.</string>
+    <string name="error_outside_hours">هذا الوقت خارج ساعات عمل القاعة.</string>
+    <string name="error_outside_window">يمكن الحجز لليوم وغدًا فقط.</string>
+    <string name="error_in_past">هذا الوقت قد مضى.</string>
+    <string name="error_too_long">هذه المدة أطول مما تسمح به القاعة.</string>
+    <string name="dismiss">إخفاء</string>
+    <string name="logo">الشعار</string>
+    <plurals name="seats">
+        <item quantity="zero">لا مقاعد</item>
+        <item quantity="one">مقعد واحد</item>
+        <item quantity="two">مقعدان</item>
+        <item quantity="few">%d مقاعد</item>
+        <item quantity="many">%d مقعدًا</item>
+        <item quantity="other">%d مقعد</item>
+    </plurals>
 </resources>

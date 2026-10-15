@@ -1,0 +1,7 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<lint>
+    <!-- "A newer version of X is available" depends on the day lint runs, not on the code;
+         dependency updates come through Renovate pull requests instead. -->
+    <issue id="NewerVersionAvailable" severity="ignore" />
+    <issue id="GradleDependency" severity="ignore" />
+</lint>

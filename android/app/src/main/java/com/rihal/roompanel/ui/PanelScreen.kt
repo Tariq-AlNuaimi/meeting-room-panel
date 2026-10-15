@@ -1,10 +1,12 @@
 package com.rihal.roompanel.ui
 
+import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
-import androidx.compose.foundation.layout.FlowRow
 import androidx.compose.foundation.layout.ExperimentalLayoutApi
+import androidx.compose.foundation.layout.FlowRow
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxHeight
@@ -13,17 +15,15 @@ import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.padding
-import androidx.compose.foundation.lazy.LazyColumn
-import androidx.compose.foundation.lazy.items
+import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.shape.RoundedCornerShape
-import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.Text
-import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
@@ -32,184 +32,332 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.platform.LocalConfiguration
+import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.res.pluralStringResource
 import androidx.compose.ui.res.stringResource
+import androidx.compose.ui.semantics.LiveRegionMode
 import androidx.compose.ui.semantics.heading
 import androidx.compose.ui.semantics.liveRegion
-import androidx.compose.ui.semantics.LiveRegionMode
 import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
+import androidx.compose.ui.unit.TextUnit
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.rihal.roompanel.R
 import com.rihal.roompanel.data.SyncProblem
-import com.rihal.roompanel.ui.qr.QrCode
 import com.rihal.roompanel.domain.AttendeeDisplay
+import com.rihal.roompanel.domain.IssueCategory
 import com.rihal.roompanel.domain.Meeting
 import com.rihal.roompanel.domain.PanelConfig
 import com.rihal.roompanel.domain.RoomStatus
-import java.time.Duration
+import com.rihal.roompanel.ui.qr.QrCode
 import java.time.Instant
-import java.time.ZoneId
-import java.time.format.DateTimeFormatter
-import java.time.format.FormatStyle
 
-private val MinTouch = 64.dp
+internal val MinTouch = 64.dp
 
+/** Everything the door can ask the app to do. Defaults let previews and tests pass only what they use. */
+class PanelActions(
+    val onBook: (minutes: Int, start: Instant?, presetIndex: Int?) -> Unit = { _, _, _ -> },
+    val onExtend: (meetingId: String, minutes: Int) -> Unit = { _, _ -> },
+    val onEnd: (String) -> Unit = {},
+    val onCheckIn: (String) -> Unit = {},
+    val onReport: (IssueCategory) -> Unit = {},
+    val onOpenFreeRooms: () -> Unit = {},
+    val onCloseFreeRooms: () -> Unit = {},
+    val onDismissFeedback: () -> Unit = {},
+)
+
+/** An open booking sheet: from now, or from a later free slot. */
+internal data class BookingRequest(val start: Instant?, val lengths: List<Int>)
+
+/**
+ * Design A ("Split"): room status on the start side, today and tomorrow on the end side.
+ * No keyboard anywhere: every choice is a button. Sheets are drawn inside this screen
+ * (not system dialogs), so they behave the same in kiosk lock-task mode.
+ */
 @Composable
 fun PanelScreen(
     state: PanelUiState,
-    onBook: (Int) -> Unit,
-    onExtend: (String) -> Unit,
-    onEnd: (String) -> Unit,
-    onCheckIn: (String) -> Unit,
-    onDismissError: () -> Unit,
+    actions: PanelActions = PanelActions(),
+    freeRooms: FreeRoomsState = FreeRoomsState.Closed,
 ) {
-    var showBooking by remember { mutableStateOf(false) }
+    val branding = state.config.branding
+    PanelLocale(shownLocale(branding.language, state.now), state.config.zone, branding.clock24h) {
+        var booking by remember { mutableStateOf<BookingRequest?>(null) }
+        var reporting by remember { mutableStateOf(false) }
+        // A sheet for a choice the room no longer allows (it became busy, went stale) closes itself.
+        LaunchedEffect(state.bookingAllowed) { if (!state.bookingAllowed) booking = null }
 
-    Row(Modifier.fillMaxSize().background(MaterialTheme.colorScheme.background)) {
-        StatusPane(
-            state = state,
-            onBookClick = { showBooking = true },
-            onExtend = onExtend,
-            onEnd = onEnd,
-            onCheckIn = onCheckIn,
-            modifier = Modifier.weight(0.62f).fillMaxHeight(),
-        )
-        AgendaPane(state, Modifier.weight(0.38f).fillMaxHeight())
-    }
-
-    if (showBooking) {
-        BookNowDialog(
-            options = state.bookOptions,
-            onPick = { minutes -> showBooking = false; onBook(minutes) },
-            onDismiss = { showBooking = false },
-        )
-    }
-    state.lastError?.let { code ->
-        AlertDialog(
-            onDismissRequest = onDismissError,
-            confirmButton = { TextButton(onClick = onDismissError) { Text(stringResource(R.string.ok)) } },
-            title = { Text(stringResource(R.string.action_failed)) },
-            text = {
-                Text(
-                    stringResource(
-                        when (code) {
-                            "conflict" -> R.string.error_conflict
-                            "offline" -> R.string.error_offline
-                            "not_panel_booking" -> R.string.error_not_panel_booking
-                            "ended", "not_found" -> R.string.error_meeting_gone
-                            else -> R.string.error_generic
-                        },
-                    ),
+        Box(Modifier.fillMaxSize().background(MaterialTheme.colorScheme.background)) {
+            Row(Modifier.fillMaxSize()) {
+                StatusPane(
+                    state = state,
+                    actions = actions,
+                    onBookNow = { booking = BookingRequest(null, state.bookOptions) },
+                    modifier = Modifier.weight(0.6f).fillMaxHeight(),
                 )
-            },
-        )
+                AgendaPane(
+                    state = state,
+                    onBookSlot = { slot ->
+                        booking = BookingRequest(
+                            start = if (slot.startsNow) null else slot.start,
+                            lengths = com.rihal.roompanel.domain.AgendaPlanner.lengthsFor(slot, state.now, state.config),
+                        )
+                    },
+                    onFindRoom = actions.onOpenFreeRooms,
+                    onReport = { reporting = true },
+                    modifier = Modifier.weight(0.4f).fillMaxHeight(),
+                )
+            }
+            booking?.let { request ->
+                BookingSheet(
+                    state = state,
+                    request = request,
+                    onBook = { minutes, preset ->
+                        booking = null
+                        actions.onBook(minutes, request.start, preset)
+                    },
+                    onClose = { booking = null },
+                )
+            }
+            if (reporting) {
+                ReportSheet(
+                    onPick = { reporting = false; actions.onReport(it) },
+                    onClose = { reporting = false },
+                )
+            }
+            if (freeRooms != FreeRoomsState.Closed) FreeRoomsSheet(freeRooms, actions.onCloseFreeRooms)
+        }
     }
 }
 
 @Composable
-private fun StatusPane(
-    state: PanelUiState,
-    onBookClick: () -> Unit,
-    onExtend: (String) -> Unit,
-    onEnd: (String) -> Unit,
-    onCheckIn: (String) -> Unit,
-    modifier: Modifier,
-) {
+private fun StatusPane(state: PanelUiState, actions: PanelActions, onBookNow: () -> Unit, modifier: Modifier) {
+    val config = state.config
     val status = state.status
-    Column(
-        modifier.background(StatusColors.of(status)).padding(48.dp),
-        verticalArrangement = Arrangement.SpaceBetween,
-    ) {
-        Column {
-            if (state.stale) StaleBanner(state.problem)
+    val color = statusColor(state)
+    Box(modifier.background(color)) {
+        // A background image sits under a dark scrim and the status tint, so white text keeps its contrast.
+        state.images.background?.let {
+            Image(it, contentDescription = null, contentScale = ContentScale.Crop, modifier = Modifier.fillMaxSize())
+            Box(Modifier.fillMaxSize().background(Color.Black.copy(alpha = 0.45f)))
+            Box(Modifier.fillMaxSize().background(color.copy(alpha = 0.7f)))
+        }
+        Column(Modifier.fillMaxSize().padding(horizontal = 36.dp, vertical = 28.dp)) {
+            RoomHeader(state)
+            Spacer(Modifier.height(12.dp))
+            Feedback(state, actions.onDismissFeedback)
             Text(
-                state.config.roomName,
-                color = Color.White.copy(alpha = 0.85f),
-                fontSize = 28.sp,
-                modifier = Modifier.semantics { heading() },
-            )
-            Text(
-                stringResource(
-                    when (status) {
-                        is RoomStatus.Free -> R.string.status_free
-                        is RoomStatus.StartingSoon -> R.string.status_starting_soon
-                        is RoomStatus.Busy -> R.string.status_busy
-                    },
-                ),
+                stringResource(statusLabel(state)),
                 color = Color.White,
-                fontSize = 88.sp,
+                fontSize = 64.sp,
+                lineHeight = 68.sp,
                 fontWeight = FontWeight.Bold,
                 modifier = Modifier.semantics { liveRegion = LiveRegionMode.Polite },
             )
-        }
-
-        when (status) {
-            is RoomStatus.Busy -> CurrentMeeting(status.current, state.now, state.config)
-            is RoomStatus.StartingSoon -> NextUp(status.next, state.now, state.config)
-            is RoomStatus.Free -> status.next?.let { NextUp(it, state.now, state.config) }
-                ?: WhiteText(stringResource(R.string.free_rest_of_day), 28.sp)
-        }
-
-        Row(horizontalArrangement = Arrangement.spacedBy(16.dp)) {
-            val enabled = !state.actionInFlight
-            when (status) {
-                is RoomStatus.Busy -> {
-                    val current = status.current
-                    if (!current.checkedIn && !state.stale) PanelButton(stringResource(R.string.check_in), enabled) { onCheckIn(current.id) }
-                    if (state.canExtendCurrent) {
-                        PanelOutlinedButton(stringResource(R.string.extend_minutes, state.config.extendStepMinutes), enabled) { onExtend(current.id) }
-                    }
-                    if (current.bookedFromPanel && !state.stale) PanelOutlinedButton(stringResource(R.string.end_now), enabled) { onEnd(current.id) }
+            StatusLine(state)
+            Spacer(Modifier.height(12.dp))
+            Row(Modifier.weight(1f).fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(24.dp)) {
+                Column(Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(6.dp)) {
+                    StatusDetails(state)
                 }
-                is RoomStatus.StartingSoon -> {
-                    val next = status.next
-                    val windowOpen = !state.now.isBefore(next.start.minusSeconds(state.config.checkInWindowMinutes * 60L))
-                    if (!next.checkedIn && windowOpen && !state.stale) PanelButton(stringResource(R.string.check_in), enabled) { onCheckIn(next.id) }
-                    if (state.bookOptions.isNotEmpty()) PanelOutlinedButton(stringResource(R.string.book_now), enabled, onBookClick)
-                }
-                is RoomStatus.Free -> if (state.bookOptions.isNotEmpty()) PanelButton(stringResource(R.string.book_now), enabled, onBookClick)
+                SideCode(state)
+            }
+            Messages(state)
+            Spacer(Modifier.height(12.dp))
+            StatusButtons(state, actions, onBookNow)
+        }
+    }
+}
+
+private fun statusColor(state: PanelUiState): Color = when {
+    state.config.outOfService -> StatusColors.OutOfService
+    else -> StatusColors.of(state.status)
+}
+
+private fun statusLabel(state: PanelUiState): Int = when {
+    state.config.outOfService -> R.string.status_out_of_service
+    else -> when (state.status) {
+        is RoomStatus.Free -> R.string.status_free
+        is RoomStatus.StartingSoon -> R.string.status_starting_soon
+        is RoomStatus.Busy -> R.string.status_busy
+    }
+}
+
+@OptIn(ExperimentalLayoutApi::class)
+@Composable
+private fun RoomHeader(state: PanelUiState) {
+    val config = state.config
+    Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(14.dp)) {
+        state.images.logo?.let {
+            Image(
+                it,
+                contentDescription = stringResource(R.string.logo),
+                modifier = Modifier
+                    .heightIn(max = 44.dp)
+                    .width(120.dp)
+                    .clip(RoundedCornerShape(8.dp))
+                    .background(Color.White)
+                    .padding(4.dp),
+            )
+        }
+        Column {
+            Text(
+                config.roomName,
+                color = Color.White,
+                fontSize = 26.sp,
+                fontWeight = FontWeight.SemiBold,
+                maxLines = 1,
+                overflow = TextOverflow.Ellipsis,
+                modifier = Modifier.semantics { heading() },
+            )
+            val facts = buildList {
+                if (config.floor.isNotBlank()) add(config.floor)
+                config.capacity?.let { add(pluralStringResource(R.plurals.seats, it, it)) }
+                config.equipment.sortedBy { it.ordinal }.forEach { add(stringResource(equipmentLabel(it))) }
+            }
+            if (facts.isNotEmpty()) {
+                Text(facts.joinToString(" · "), color = Color.White.copy(alpha = 0.9f), fontSize = 17.sp, maxLines = 1, overflow = TextOverflow.Ellipsis)
             }
         }
     }
 }
 
-/** The door may be wrong: say so plainly, and why, instead of showing old data as fact. */
+private fun equipmentLabel(e: com.rihal.roompanel.domain.Equipment) = when (e) {
+    com.rihal.roompanel.domain.Equipment.SCREEN -> R.string.equipment_SCREEN
+    com.rihal.roompanel.domain.Equipment.VIDEO -> R.string.equipment_VIDEO
+    com.rihal.roompanel.domain.Equipment.WHITEBOARD -> R.string.equipment_WHITEBOARD
+    com.rihal.roompanel.domain.Equipment.PHONE -> R.string.equipment_PHONE
+    com.rihal.roompanel.domain.Equipment.ACCESSIBLE -> R.string.equipment_ACCESSIBLE
+}
+
+/** In flight, done, or failed (named), or the stale warning: never silence after a tap. */
 @Composable
-private fun StaleBanner(problem: SyncProblem?) {
-    Text(
-        stringResource(
-            when (problem) {
-                SyncProblem.CALENDAR_NOT_CONFIGURED -> R.string.stale_not_configured
-                SyncProblem.CALENDAR_UNAVAILABLE -> R.string.stale_calendar
-                else -> R.string.stale_offline
-            },
-        ),
-        color = Color.White,
-        fontSize = 20.sp,
-        modifier = Modifier
-            .padding(bottom = 16.dp)
-            .background(Color.Black.copy(alpha = 0.35f), RoundedCornerShape(12.dp))
-            .padding(horizontal = 16.dp, vertical = 10.dp)
-            .semantics { liveRegion = LiveRegionMode.Polite },
-    )
+private fun Feedback(state: PanelUiState, onDismiss: () -> Unit) {
+    val fmt = LocalTimeFormat.current
+    val fb = state.feedback
+    val text: String? = when {
+        fb.inFlight -> stringResource(R.string.working)
+        fb.success != null -> when (val s = fb.success) {
+            is ActionResult.Booked ->
+                if (s.later) stringResource(R.string.booked_later, fmt.time(s.start), fmt.time(s.until))
+                else stringResource(R.string.booked_until, fmt.time(s.until))
+            is ActionResult.Extended -> stringResource(R.string.extended_until, fmt.time(s.until))
+            ActionResult.Ended -> stringResource(R.string.ended_done)
+            ActionResult.CheckedIn -> stringResource(R.string.checked_in_done)
+            ActionResult.Reported -> stringResource(R.string.reported_done)
+        }
+        fb.error != null -> stringResource(errorText(fb.error))
+        state.stale -> stringResource(staleText(state.problem))
+        else -> null
+    }
+    text ?: return
+    val isError = fb.error != null
+    Row(
+        Modifier
+            .padding(bottom = 12.dp)
+            .clip(RoundedCornerShape(12.dp))
+            .background(if (isError) Color.Black.copy(alpha = 0.55f) else Color.Black.copy(alpha = 0.3f))
+            .padding(start = 18.dp)
+            .semantics { liveRegion = LiveRegionMode.Assertive },
+        verticalAlignment = Alignment.CenterVertically,
+    ) {
+        Text(text, color = Color.White, fontSize = 20.sp, fontWeight = FontWeight.SemiBold, modifier = Modifier.padding(vertical = 12.dp).weight(1f, fill = false))
+        if (fb.success != null || fb.error != null) {
+            androidx.compose.material3.TextButton(onClick = onDismiss, modifier = Modifier.heightIn(min = MinTouch)) {
+                Text(stringResource(R.string.dismiss), color = Color.White, fontSize = 18.sp)
+            }
+        } else {
+            Spacer(Modifier.width(18.dp))
+        }
+    }
+}
+
+internal fun errorText(code: String): Int = when (code) {
+    "conflict" -> R.string.error_conflict
+    "offline" -> R.string.error_offline
+    "not_panel_booking" -> R.string.error_not_panel_booking
+    "ended", "not_found" -> R.string.error_meeting_gone
+    "booking_disabled" -> R.string.error_booking_disabled
+    "out_of_service" -> R.string.error_out_of_service
+    "outside_hours" -> R.string.error_outside_hours
+    "outside_window" -> R.string.error_outside_window
+    "in_past", "not_aligned" -> R.string.error_in_past
+    "too_long", "invalid_duration" -> R.string.error_too_long
+    else -> R.string.error_generic
+}
+
+private fun staleText(problem: SyncProblem?) = when (problem) {
+    SyncProblem.CALENDAR_NOT_CONFIGURED -> R.string.stale_not_configured
+    SyncProblem.CALENDAR_UNAVAILABLE -> R.string.stale_calendar
+    else -> R.string.stale_offline
+}
+
+/** "Free until 13:00" / "Busy until 11:00": the line people read from across the corridor. */
+@Composable
+private fun StatusLine(state: PanelUiState) {
+    val fmt = LocalTimeFormat.current
+    val text = when {
+        state.config.outOfService -> state.config.outOfServiceMessage.ifBlank { stringResource(R.string.out_of_service_default) }
+        else -> when (val s = state.status) {
+            is RoomStatus.Busy -> stringResource(R.string.busy_until, fmt.time(s.current.end))
+            is RoomStatus.StartingSoon -> stringResource(R.string.free_until, fmt.time(s.next.start))
+            is RoomStatus.Free -> s.next?.let { stringResource(R.string.free_until, fmt.time(it.start)) }
+                ?: stringResource(R.string.free_rest_of_day)
+        }
+    }
+    Text(text, color = Color.White, fontSize = 30.sp, fontWeight = FontWeight.SemiBold, maxLines = 2, overflow = TextOverflow.Ellipsis)
 }
 
 @Composable
-private fun CurrentMeeting(meeting: Meeting, now: Instant, config: PanelConfig) {
-    MeetingWithJoinCode(meeting) {
-        WhiteText(meetingTitle(meeting), 40.sp, FontWeight.SemiBold)
-        if (!meeting.isPrivate) meeting.organizer?.let { WhiteText(it, 24.sp) }
-        WhiteText(
-            "${timeRange(meeting)} · " + stringResource(R.string.minutes_left, minutesBetween(now, meeting.end)),
-            24.sp,
-        )
-        ReleaseWarning(meeting)
-        Attendees(meeting, config.attendeeDisplay)
+private fun StatusDetails(state: PanelUiState) {
+    val fmt = LocalTimeFormat.current
+    if (state.config.outOfService) return
+    when (val s = state.status) {
+        is RoomStatus.Busy -> {
+            state.endingInMinutes?.let { EndingSoon(it) }
+            WhiteText(meetingTitle(s.current), 30.sp, FontWeight.SemiBold)
+            if (!s.current.isPrivate) s.current.organizer?.let { WhiteText(it, 20.sp) }
+            WhiteText(fmt.range(s.current.start, s.current.end), 20.sp)
+            ReleaseWarning(s.current)
+            Attendees(s.current, state.config.attendeeDisplay)
+            s.next?.let { NextPreview(it) }
+        }
+        is RoomStatus.StartingSoon -> {
+            WhiteText(meetingTitle(s.next), 30.sp, FontWeight.SemiBold)
+            if (!s.next.isPrivate) s.next.organizer?.let { WhiteText(it, 20.sp) }
+            WhiteText(fmt.range(s.next.start, s.next.end), 20.sp)
+            ReleaseWarning(s.next)
+        }
+        is RoomStatus.Free -> s.next?.let { NextPreview(it) }
     }
+}
+
+/** Next booking: time and organiser, or "Private meeting" (privacy is applied on the server too). */
+@Composable
+private fun NextPreview(next: Meeting) {
+    val fmt = LocalTimeFormat.current
+    val who = when {
+        next.isPrivate -> stringResource(R.string.private_meeting)
+        else -> next.organizer ?: meetingTitle(next)
+    }
+    WhiteText(stringResource(R.string.next_meeting, fmt.range(next.start, next.end), who), 20.sp)
+}
+
+@Composable
+private fun EndingSoon(minutes: Long) {
+    Text(
+        stringResource(R.string.ends_in, minutes.toInt()),
+        color = Color.White,
+        fontSize = 24.sp,
+        fontWeight = FontWeight.Bold,
+        modifier = Modifier
+            .clip(RoundedCornerShape(10.dp))
+            .background(StatusColors.Warning)
+            .padding(horizontal = 14.dp, vertical = 6.dp)
+            .semantics { liveRegion = LiveRegionMode.Polite },
+    )
 }
 
 /** "Check in by 10:10 or the room is released": only when the room releases no-shows. */
@@ -217,33 +365,65 @@ private fun CurrentMeeting(meeting: Meeting, now: Instant, config: PanelConfig) 
 private fun ReleaseWarning(meeting: Meeting) {
     val at = meeting.releaseAt ?: return
     if (meeting.checkedIn) return
-    WhiteText(stringResource(R.string.release_warning, formatTime(at)), 22.sp, FontWeight.SemiBold)
+    WhiteText(stringResource(R.string.release_warning, LocalTimeFormat.current.time(at)), 20.sp, FontWeight.SemiBold)
 }
 
-/** Meeting details, with a Teams join QR beside them when the meeting has a link. */
+/** Teams join QR for the meeting on screen, else the guest Wi-Fi QR while the room is idle. */
 @Composable
-private fun MeetingWithJoinCode(meeting: Meeting, details: @Composable () -> Unit) {
-    val joinUrl = meeting.joinUrl?.takeIf { !meeting.isPrivate && it.startsWith("https://") }
-    Row(horizontalArrangement = Arrangement.spacedBy(32.dp), verticalAlignment = Alignment.CenterVertically) {
-        Column(Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(8.dp)) { details() }
-        if (joinUrl != null) {
-            Column(horizontalAlignment = Alignment.CenterHorizontally, verticalArrangement = Arrangement.spacedBy(8.dp)) {
-                val label = stringResource(R.string.scan_to_join)
-                QrCode(joinUrl, 152.dp, label, Modifier.clip(RoundedCornerShape(8.dp)))
-                Text(label, color = Color.White, fontSize = 16.sp)
-            }
-        }
+private fun SideCode(state: PanelUiState) {
+    val meeting = when (val s = state.status) {
+        is RoomStatus.Busy -> s.current
+        is RoomStatus.StartingSoon -> s.next
+        is RoomStatus.Free -> null
+    }
+    val joinUrl = meeting?.joinUrl?.takeIf { !meeting.isPrivate && it.startsWith("https://") }
+    val wifi = state.config.guestWifi
+    when {
+        joinUrl != null -> CodeCard(joinUrl, stringResource(R.string.scan_to_join))
+        meeting == null && wifi != null && !state.config.outOfService ->
+            CodeCard(wifi.qrPayload(), stringResource(R.string.guest_wifi_scan, wifi.ssid), stringResource(R.string.guest_wifi))
     }
 }
 
 @Composable
-private fun NextUp(meeting: Meeting, now: Instant, config: PanelConfig) {
-    MeetingWithJoinCode(meeting) {
-        WhiteText(stringResource(R.string.next_in_minutes, minutesBetween(now, meeting.start)), 24.sp)
-        WhiteText(meetingTitle(meeting), 36.sp, FontWeight.SemiBold)
-        WhiteText(timeRange(meeting), 24.sp)
-        ReleaseWarning(meeting)
-        Attendees(meeting, config.attendeeDisplay)
+private fun CodeCard(payload: String, label: String, title: String? = null) {
+    Column(horizontalAlignment = Alignment.CenterHorizontally, verticalArrangement = Arrangement.spacedBy(6.dp), modifier = Modifier.width(150.dp)) {
+        title?.let { Text(it, color = Color.White, fontSize = 16.sp, fontWeight = FontWeight.SemiBold) }
+        QrCode(payload, 120.dp, label, Modifier.clip(RoundedCornerShape(8.dp)))
+        Text(label, color = Color.White, fontSize = 14.sp, maxLines = 2, overflow = TextOverflow.Ellipsis, textAlign = androidx.compose.ui.text.style.TextAlign.Center)
+    }
+}
+
+/** Welcome message while free, and the visitor notice: both set in the portal. */
+@Composable
+private fun Messages(state: PanelUiState) {
+    val b = state.config.branding
+    if (state.status is RoomStatus.Free && b.welcomeMessage.isNotBlank()) WhiteText(b.welcomeMessage, 20.sp)
+    if (b.visitorNotice.isNotBlank()) WhiteText(b.visitorNotice, 17.sp)
+}
+
+@Composable
+private fun StatusButtons(state: PanelUiState, actions: PanelActions, onBookNow: () -> Unit) {
+    val enabled = !state.actionInFlight
+    Row(horizontalArrangement = Arrangement.spacedBy(14.dp)) {
+        if (state.config.outOfService) return@Row
+        when (val status = state.status) {
+            is RoomStatus.Busy -> {
+                val current = status.current
+                if (!current.checkedIn && !state.stale) PanelButton(stringResource(R.string.check_in), enabled) { actions.onCheckIn(current.id) }
+                state.extendOptions.forEach { m ->
+                    PanelOutlinedButton(stringResource(R.string.extend_minutes, m), enabled) { actions.onExtend(current.id, m) }
+                }
+                if (current.bookedFromPanel && !state.stale) PanelOutlinedButton(stringResource(R.string.end_now), enabled) { actions.onEnd(current.id) }
+            }
+            is RoomStatus.StartingSoon -> {
+                val next = status.next
+                val windowOpen = !state.now.isBefore(next.start.minusSeconds(state.config.checkInWindowMinutes * 60L))
+                if (!next.checkedIn && windowOpen && !state.stale) PanelButton(stringResource(R.string.check_in), enabled) { actions.onCheckIn(next.id) }
+                if (state.bookOptions.isNotEmpty()) PanelOutlinedButton(stringResource(R.string.book_now), enabled, onBookNow)
+            }
+            is RoomStatus.Free -> if (state.bookOptions.isNotEmpty()) PanelButton(stringResource(R.string.book_now), enabled, onBookNow)
+        }
     }
 }
 
@@ -255,20 +435,21 @@ private fun Attendees(meeting: Meeting, display: AttendeeDisplay) {
         AttendeeDisplay.OFF -> Unit
         AttendeeDisplay.COUNT -> WhiteText(
             pluralStringResource(R.plurals.attendee_count, meeting.attendeeCount, meeting.attendeeCount),
-            22.sp,
+            18.sp,
         )
         AttendeeDisplay.NAMES -> FlowRow(
             horizontalArrangement = Arrangement.spacedBy(8.dp),
-            verticalArrangement = Arrangement.spacedBy(8.dp),
+            verticalArrangement = Arrangement.spacedBy(6.dp),
+            maxLines = 1,
         ) {
             meeting.attendees.forEach { name ->
                 Text(
                     name,
                     color = Color.White,
-                    fontSize = 18.sp,
+                    fontSize = 16.sp,
                     modifier = Modifier
                         .background(Color.Black.copy(alpha = 0.2f), RoundedCornerShape(50))
-                        .padding(horizontal = 14.dp, vertical = 6.dp),
+                        .padding(horizontal = 12.dp, vertical = 4.dp),
                 )
             }
         }
@@ -276,122 +457,38 @@ private fun Attendees(meeting: Meeting, display: AttendeeDisplay) {
 }
 
 @Composable
-private fun AgendaPane(state: PanelUiState, modifier: Modifier) {
-    Column(modifier.background(MaterialTheme.colorScheme.surface).padding(32.dp)) {
-        Text(
-            stringResource(R.string.today),
-            style = MaterialTheme.typography.headlineMedium,
-            color = MaterialTheme.colorScheme.onSurface,
-            modifier = Modifier.semantics { heading() },
-        )
-        Text(
-            formatTime(state.now),
-            style = MaterialTheme.typography.titleLarge,
-            color = MaterialTheme.colorScheme.onSurfaceVariant,
-        )
-        Spacer(Modifier.height(16.dp))
-        if (state.upcoming.isEmpty()) {
-            Text(
-                stringResource(R.string.no_more_meetings),
-                style = MaterialTheme.typography.titleMedium,
-                color = MaterialTheme.colorScheme.onSurfaceVariant,
-            )
-        } else {
-            LazyColumn(Modifier.weight(1f).fillMaxWidth(), verticalArrangement = Arrangement.spacedBy(12.dp)) {
-                items(state.upcoming, key = Meeting::id) { meeting ->
-                    val ongoing = meeting.isOngoingAt(state.now)
-                    Column(
-                        Modifier
-                            .fillMaxWidth()
-                            .background(
-                                if (ongoing) StatusColors.Busy.copy(alpha = 0.35f) else MaterialTheme.colorScheme.surfaceVariant,
-                                RoundedCornerShape(12.dp),
-                            )
-                            .padding(16.dp),
-                    ) {
-                        Text(timeRange(meeting), style = MaterialTheme.typography.titleMedium, color = MaterialTheme.colorScheme.onSurfaceVariant)
-                        Text(
-                            meetingTitle(meeting),
-                            style = MaterialTheme.typography.titleLarge,
-                            color = MaterialTheme.colorScheme.onSurface,
-                            maxLines = 1,
-                            overflow = TextOverflow.Ellipsis,
-                        )
-                    }
-                }
-            }
-        }
-    }
-}
-
-@Composable
-private fun BookNowDialog(options: List<Int>, onPick: (Int) -> Unit, onDismiss: () -> Unit) {
-    AlertDialog(
-        onDismissRequest = onDismiss,
-        title = { Text(stringResource(R.string.book_now)) },
-        text = {
-            if (options.isEmpty()) {
-                Text(stringResource(R.string.no_time_available))
-            } else {
-                Row(horizontalArrangement = Arrangement.spacedBy(12.dp)) {
-                    options.forEach { minutes ->
-                        Button(onClick = { onPick(minutes) }, modifier = Modifier.heightIn(min = MinTouch)) {
-                            Text(stringResource(R.string.minutes_short, minutes), fontSize = 22.sp)
-                        }
-                    }
-                }
-            }
-        },
-        confirmButton = {},
-        dismissButton = { TextButton(onClick = onDismiss) { Text(stringResource(R.string.cancel)) } },
-    )
-}
-
-@Composable
-private fun PanelButton(label: String, enabled: Boolean, onClick: () -> Unit) {
+internal fun PanelButton(label: String, enabled: Boolean, onClick: () -> Unit) {
     Button(
         onClick = onClick,
         enabled = enabled,
         colors = ButtonDefaults.buttonColors(containerColor = Color.White, contentColor = Color(0xFF121417)),
         modifier = Modifier.heightIn(min = MinTouch),
-    ) { Text(label, fontSize = 24.sp, modifier = Modifier.padding(horizontal = 16.dp)) }
+    ) { Text(label, fontSize = 24.sp, fontWeight = FontWeight.SemiBold, modifier = Modifier.padding(horizontal = 12.dp)) }
 }
 
 @Composable
-private fun PanelOutlinedButton(label: String, enabled: Boolean, onClick: () -> Unit) {
+internal fun PanelOutlinedButton(label: String, enabled: Boolean, onClick: () -> Unit) {
     OutlinedButton(
         onClick = onClick,
         enabled = enabled,
         colors = ButtonDefaults.outlinedButtonColors(contentColor = Color.White),
+        border = androidx.compose.foundation.BorderStroke(2.dp, Color.White),
         modifier = Modifier.heightIn(min = MinTouch),
-    ) { Text(label, fontSize = 24.sp, modifier = Modifier.padding(horizontal = 16.dp)) }
+    ) { Text(label, fontSize = 22.sp, fontWeight = FontWeight.SemiBold, modifier = Modifier.padding(horizontal = 8.dp)) }
 }
 
 @Composable
-private fun WhiteText(text: String, size: androidx.compose.ui.unit.TextUnit, weight: FontWeight = FontWeight.Normal) {
+internal fun WhiteText(text: String, size: TextUnit, weight: FontWeight = FontWeight.Normal) {
     Text(text, color = Color.White, fontSize = size, fontWeight = weight, maxLines = 2, overflow = TextOverflow.Ellipsis)
 }
 
 @Composable
-private fun meetingTitle(meeting: Meeting): String = when {
+internal fun meetingTitle(meeting: Meeting): String = when {
     meeting.isPrivate -> stringResource(R.string.private_meeting)
     meeting.bookedFromPanel && meeting.subject == null -> stringResource(R.string.adhoc_meeting)
     else -> meeting.subject ?: stringResource(R.string.untitled_meeting)
 }
 
-/** Follows the current UI locale, so a language switch re-renders times correctly. */
-@Composable
-private fun formatTime(instant: Instant): String {
-    val locale = LocalConfiguration.current.locales[0]
-    val formatter = remember(locale) { DateTimeFormatter.ofLocalizedTime(FormatStyle.SHORT).withLocale(locale) }
-    return formatter.format(instant.atZone(ZoneId.systemDefault()))
-}
-
-@Composable
-private fun timeRange(meeting: Meeting) = "${formatTime(meeting.start)} – ${formatTime(meeting.end)}"
-
-/** Rounded up so "0 min left" never shows while a meeting is still running. */
-private fun minutesBetween(from: Instant, to: Instant): Long {
-    val seconds = Duration.between(from, to).seconds.coerceAtLeast(0)
-    return (seconds + 59) / 60
-}
+/** The brand colour from the portal (already contrast-checked there), else the default. */
+internal fun brandColor(config: PanelConfig): Color =
+    config.branding.primaryColor?.let { Color(it.toInt()) } ?: StatusColors.DefaultBrand

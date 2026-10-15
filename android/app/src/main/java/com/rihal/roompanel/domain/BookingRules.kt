@@ -15,12 +15,20 @@ object BookingRules {
             .minByOrNull { it.start }
             ?.let { Duration.between(now, it.start).toMinutes() }
 
-    /** Book-now durations that fit before the next meeting and under the ad-hoc cap. Empty when busy. */
+    /** Book-now durations that fit before the next meeting and under the ad-hoc cap. Empty when busy or not allowed. */
     fun bookNowOptions(meetings: List<Meeting>, now: Instant, config: PanelConfig): List<Int> {
+        if (!config.canBook) return emptyList()
         if (meetings.any { it.isOngoingAt(now) }) return emptyList()
         val limit = minOf(minutesUntilNext(meetings, now) ?: Long.MAX_VALUE, config.maxAdHocMinutes.toLong())
         return config.bookingOptionsMinutes.filter { it <= limit }
     }
+
+    /** The extend steps (+15, +30) that fit before the next booking. Empty for meetings booked elsewhere. */
+    fun extendOptions(meeting: Meeting, meetings: List<Meeting>, config: PanelConfig): List<Int> =
+        config.extendOptionsMinutes.filter {
+            canExtend(meeting, meetings, it) &&
+                Duration.between(meeting.start, meeting.end).toMinutes() + it <= config.maxAdHocMinutes
+        }
 
     /** Whether [meeting] can be extended by [minutes] without colliding with the next booking. */
     fun canExtend(meeting: Meeting, meetings: List<Meeting>, minutes: Int): Boolean {

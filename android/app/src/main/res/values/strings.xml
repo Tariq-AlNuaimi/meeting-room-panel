@@ -8,8 +8,6 @@
     <string name="status_busy">In use</string>
 
     <string name="free_rest_of_day">Free for the rest of the day</string>
-    <string name="next_in_minutes">Next meeting in %d min</string>
-    <string name="minutes_left">%d min left</string>
     <string name="minutes_short">%d min</string>
     <plurals name="attendee_count">
         <item quantity="one">%d attendee</item>
@@ -17,7 +15,6 @@
     </plurals>
 
     <string name="today">Today</string>
-    <string name="no_more_meetings">No more meetings today</string>
     <string name="private_meeting">Private meeting</string>
     <string name="adhoc_meeting">Ad-hoc booking</string>
     <string name="untitled_meeting">Meeting</string>
@@ -27,9 +24,6 @@
     <string name="extend_minutes">+%d min</string>
     <string name="end_now">End now</string>
     <string name="no_time_available">No free time before the next meeting.</string>
-    <string name="cancel">Cancel</string>
-    <string name="ok">OK</string>
-    <string name="action_failed">That didn\'t work</string>
 
     <string name="error_conflict">Someone just booked the room for that time. Pick a shorter booking.</string>
     <string name="error_offline">The panel is offline. Try again in a moment.</string>
@@ -48,4 +42,63 @@
     <string name="pair_server">Server: %1$s</string>
     <string name="release_warning">Check in by %1$s or the room will be released.</string>
     <string name="scan_to_join">Scan to join on Teams</string>
+
+    <!-- Release 0.4 -->
+    <string name="status_out_of_service">Out of service</string>
+    <string name="free_until">Free until %1$s</string>
+    <string name="busy_until">Busy until %1$s</string>
+    <string name="out_of_service_default">This room is not available right now.</string>
+    <string name="tomorrow">Tomorrow</string>
+    <string name="day_closed">Closed</string>
+    <string name="no_meetings_day">No meetings</string>
+    <string name="free_slot">Free %1$s – %2$s</string>
+    <string name="free_now">Free now until %1$s</string>
+    <string name="tap_to_book">Book</string>
+    <string name="book_room">Book %1$s</string>
+    <string name="book_from">Book from %1$s</string>
+    <string name="pick_title">Title in Outlook</string>
+    <string name="how_long">How long?</string>
+    <string name="until_time">until %1$s</string>
+    <string name="close">Close</string>
+    <string name="working">One moment…</string>
+    <string name="booked_until">Booked until %1$s</string>
+    <string name="booked_later">Booked %1$s – %2$s</string>
+    <string name="extended_until">Extended until %1$s</string>
+    <string name="ended_done">Room released. Thank you.</string>
+    <string name="checked_in_done">Checked in.</string>
+    <string name="reported_done">Thanks. The office team has been told.</string>
+    <string name="ends_in">Ends in %1$d min</string>
+    <string name="next_meeting">Next: %1$s · %2$s</string>
+    <string name="find_room">Find a free room</string>
+    <string name="free_rooms_title">Free rooms now</string>
+    <string name="free_rooms_none">No other room is free right now.</string>
+    <string name="free_rooms_failed">Couldn\'t check the other rooms. Try again in a moment.</string>
+    <string name="free_for_rest_of_day_short">free for the rest of the day</string>
+    <string name="report_problem">Report a problem</string>
+    <string name="report_title">What\'s wrong in this room?</string>
+    <string name="issue_AV">Screen or sound</string>
+    <string name="issue_VIDEO_CALL">Video call equipment</string>
+    <string name="issue_CLEANING">Needs cleaning</string>
+    <string name="issue_SUPPLIES">Supplies (markers, cables)</string>
+    <string name="issue_TEMPERATURE">Too hot or too cold</string>
+    <string name="issue_OTHER">Something else</string>
+    <string name="guest_wifi">Guest Wi-Fi</string>
+    <string name="guest_wifi_scan">Scan to join %1$s</string>
+    <string name="equipment_SCREEN">Screen</string>
+    <string name="equipment_VIDEO">Video</string>
+    <string name="equipment_WHITEBOARD">Whiteboard</string>
+    <string name="equipment_PHONE">Phone</string>
+    <string name="equipment_ACCESSIBLE">Accessible</string>
+    <string name="error_booking_disabled">Booking from this tablet is turned off.</string>
+    <string name="error_out_of_service">This room is out of service.</string>
+    <string name="error_outside_hours">That time is outside the room\'s working hours.</string>
+    <string name="error_outside_window">You can book today and tomorrow only.</string>
+    <string name="error_in_past">That time has already passed.</string>
+    <string name="error_too_long">That\'s longer than this room allows.</string>
+    <string name="dismiss">Dismiss</string>
+    <string name="logo">Logo</string>
+    <plurals name="seats">
+        <item quantity="one">%d seat</item>
+        <item quantity="other">%d seats</item>
+    </plurals>
 </resources>

@@ -72,6 +72,31 @@ Open the app once (`adb shell monkey -p com.rihal.roompanel 1`, or tap the icon)
 - Press Home and swipe up: you should stay in the panel.
 - Reboot with `adb reboot`: the tablet should come straight back to the panel without a lock screen.
 
+## What the portal controls (no app update needed)
+
+Everything below reaches every tablet with its normal poll (about 30 seconds). Nothing is typed on the tablet.
+
+| Portal page | Setting | What the tablet does |
+|---|---|---|
+| Rooms → a room | Floor, seats, equipment | Shown under the room name and in "Find a free room" |
+| Rooms → a room | Allow employee booking on the tablet | Off: no Book buttons, no tappable free slots (the server refuses bookings too) |
+| Rooms → a room | Out of service + message | Grey "Out of service" screen with the message; booking blocked on the server |
+| Rooms → a room | Show guest Wi-Fi QR | Lets this room's tablet show the guest Wi-Fi QR (when it is on in Branding) |
+| Rooms → a room | Auto-release, check-in window, max booking length, working hours | As before; working hours also decide which free slots appear and when the screen dims |
+| Branding & display | Logo, background image, main colour | Logo next to the room name; background under a dark scrim; main colour on the clock bar and chosen title. Colours white text can't be read on are refused |
+| Branding & display | Welcome message, visitor notice | Shown on the status side |
+| Branding & display | Language (English / Arabic / both alternating) | All tablet text, right-to-left for Arabic |
+| Branding & display | 12/24-hour clock, show organiser, dim outside working hours | As named. "Show organiser" off removes names on the server |
+| Branding & display | Booking lengths, meeting titles | The length buttons, and the title chips (first one preselected) that become the Outlook subject |
+| Branding & display | Guest Wi-Fi (name, password, expiry, Rotate) | A "Scan to join" QR on the idle screen. Use a guest network only: anyone at the door can scan it |
+
+## Using the panel (release 0.4)
+
+- **Right side:** today and tomorrow. Meetings, and the free gaps between them. Tap a green **Free … Book** row to book that slot; the list scrolls, with a scrollbar.
+- **Book now** (left side, when free): pick a title chip, tap a length. Two taps, no typing. The panel shows *One moment…*, then *Booked until 12:05* or a reason (for example *Someone just booked the room for that time*).
+- **While a meeting runs:** *Check in*, *+15*, *+30* (when they fit before the next booking), *End now*. In the last 5 minutes an amber *Ends in 4 min* appears.
+- **Find a free room** and **Report a problem** are at the bottom right. Problems go to the portal's **Issues** page.
+
 ## Mount and power
 
 - **Keep it charging.** The screen only stays on while plugged in.
@@ -114,6 +139,10 @@ USB debugging must still be on.
 
 **Release builds** (what the portal installs) have no exit receiver. The way out is a factory reset (most tablets: hold **Power + Volume Up** at boot → *Wipe data*). A remote "unlock" command from the admin page is planned with the backend.
 
+## Checking tablets from the portal
+
+**Setup checks → Check tablet status** lists every paired tablet with when it was last seen, its app version, and whether it is online or waiting for an update. **Issues** lists tablets offline for 5 minutes during working hours. Each check is recorded in the audit log.
+
 ## Troubleshooting
 
 | Message from `dpm set-device-owner` | Fix |
@@ -121,6 +150,7 @@ USB debugging must still be on.
 | `Not allowed to set the device owner because there are already some accounts on the device` | Remove every account (**Settings → Accounts**), or factory reset and skip sign-in again |
 | `...because there are already several users on the device` | **Settings → System → Multiple users**: delete the guest/other users |
 | `Unknown admin` / `ComponentInfo... not found` | The app isn't installed, or the component name is mistyped: it is `com.rihal.roompanel/.kiosk.PanelDeviceAdminReceiver` |
+| Tapping Book shows an error | The message names the reason (taken, outside working hours, booking turned off, out of service). Every refusal is also counted under **Usage report → Booking failures** and logged on the server as `device.action route=book outcome=<code>` |
 | Works, but the vendor's launcher still appears after reboot | Open the panel once after `set-device-owner`. It registers itself as the home screen on first resume. |
 
 Some budget tablets ship heavily customised Android with extra "security" apps that block `dpm`. If that happens, send me the exact error and the Android version.

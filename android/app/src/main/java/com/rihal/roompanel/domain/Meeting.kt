@@ -4,6 +4,7 @@ import java.time.DayOfWeek
 import java.time.Duration
 import java.time.Instant
 import java.time.LocalTime
+import java.time.ZoneId
 
 /** One booking on the room's calendar, already normalised by the backend. */
 data class Meeting(
@@ -45,11 +46,61 @@ data class PanelConfig(
     val startingSoonWindow: Duration = Duration.ofMinutes(10),
     val bookingOptionsMinutes: List<Int> = listOf(15, 30, 60),
     val maxAdHocMinutes: Int = 120,
-    val extendStepMinutes: Int = 15,
+    /** The "+15" / "+30" buttons while a panel booking runs. */
+    val extendOptionsMinutes: List<Int> = listOf(15, 30),
     val workingHours: WorkingHours = WorkingHours(),
     /** Minutes before a meeting starts that "Check in" appears. */
     val checkInWindowMinutes: Int = 10,
+    /** The room's time zone (from the portal); booking slots are computed in it. */
+    val zone: ZoneId = ZoneId.systemDefault(),
+    val floor: String = "",
+    val capacity: Int? = null,
+    val equipment: Set<Equipment> = emptySet(),
+    /** Portal switch "Allow employee booking on tablet". */
+    val allowTabletBooking: Boolean = true,
+    /** Maintenance mode: shows [outOfServiceMessage], no booking. */
+    val outOfService: Boolean = false,
+    val outOfServiceMessage: String = "",
+    val branding: Branding = Branding(),
+    /** Shown as a join QR on the idle screen; null when the portal has it off or expired. */
+    val guestWifi: GuestWifi? = null,
+) {
+    /** Booking from this tablet is possible at all (the server enforces the same rules). */
+    val canBook: Boolean get() = allowTabletBooking && !outOfService
+}
+
+/** Fixed codes from the portal; the tablet shows translated labels. */
+enum class Equipment { SCREEN, VIDEO, WHITEBOARD, PHONE, ACCESSIBLE }
+
+enum class PanelLanguage { EN, AR, BOTH }
+
+/** Everything the portal's "Branding & display" page controls. */
+data class Branding(
+    val orgName: String = "",
+    /** ARGB; null = the app's default. The portal only saves colours white text reads on (>= 4.5:1). */
+    val primaryColor: Long? = null,
+    /** Server-relative image paths carrying a version, so a change is a new URL. */
+    val logoPath: String? = null,
+    val backgroundPath: String? = null,
+    val welcomeMessage: String = "",
+    val visitorNotice: String = "",
+    val language: PanelLanguage = PanelLanguage.EN,
+    val clock24h: Boolean = true,
+    /** Meeting titles to tap when booking; the first is preselected. Empty = the default title. */
+    val titlePresets: List<String> = emptyList(),
+    val dimOutsideHours: Boolean = true,
 )
+
+/** Guest network for the idle-screen QR code (sent by the server only while it should show). */
+data class GuestWifi(val ssid: String, val password: String) {
+    /** The de-facto standard Wi-Fi QR payload (as Android and iOS cameras read it). */
+    fun qrPayload(): String = "WIFI:T:WPA;S:${escape(ssid)};P:${escape(password)};;"
+
+    private fun escape(s: String) = s.replace(Regex("""([\\;,:"])"""), """\\$1""")
+
+    /** Never print the password, e.g. in a crash log. */
+    override fun toString() = "GuestWifi(ssid=$ssid)"
+}
 
 /** When the office is open. Outside these hours the panel dims unless the room is in use. */
 data class WorkingHours(
@@ -64,3 +115,9 @@ data class WorkingHours(
         require(end.isAfter(start)) { "Working hours must end after they start" }
     }
 }
+
+/** Another room that is free now, for "Find a free room". */
+data class FreeRoom(val name: String, val floor: String, val capacity: Int?, val freeUntil: Instant?)
+
+/** "Report a problem" categories; the same fixed list as the portal. */
+enum class IssueCategory { AV, VIDEO_CALL, CLEANING, SUPPLIES, TEMPERATURE, OTHER }
