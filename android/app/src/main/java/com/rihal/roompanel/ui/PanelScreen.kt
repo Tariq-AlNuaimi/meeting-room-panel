@@ -297,7 +297,7 @@ private fun AgendaPane(state: PanelUiState, modifier: Modifier) {
                 color = MaterialTheme.colorScheme.onSurfaceVariant,
             )
         } else {
-            LazyColumn(verticalArrangement = Arrangement.spacedBy(12.dp)) {
+            LazyColumn(Modifier.weight(1f).fillMaxWidth(), verticalArrangement = Arrangement.spacedBy(12.dp)) {
                 items(state.upcoming, key = Meeting::id) { meeting ->
                     val ongoing = meeting.isOngoingAt(state.now)
                     Column(
